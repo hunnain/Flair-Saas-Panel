@@ -1,0 +1,16 @@
+var express 		    = require('express')
+var router 			    = express.Router()
+var controller 	        = require('../controllers/groups')
+
+router.route('/create')			.post(controller.createGroup)
+router.route('/allgroups')			.post(controller.getAllGroup)
+router.route('/adduseringroup')			.post(controller.addUserInGroup)
+// router.route('/searchkitchen')	    .post(controller.searchKitchen)
+// router.route('/updatekitchen')	    .post(controller.updateKitchen)
+// router.route('/deletekitchen')	    .post(controller.deleteUserKitchen)
+// router.route('/likekitchen')	    .post(controller.likeKitchen)
+// router.route('/getuserlikedkitchen')	    .post(controller.getSingleUserLikedKitchen)
+// router.route('/getsinglekitchenviaid')	    .post(controller.getSingleKitchenViaID)
+// router.route('/blockuser')	    .post(controller.blockUser)
+// router.route('/stripemerchantconnected')	    .post(controller.isStripeMerchantConnected)
+module.exports = router;

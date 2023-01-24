@@ -1,0 +1,108 @@
+const UserModel = require("../models/shopAdminSignup");
+const ShopBranchesModel = require("../models/shopLocation");
+const moment = require('moment-timezone');
+const jwt = require("jsonwebtoken");
+const Push = require("../helper/pushNotifications");
+const NotificationModel = require("../models/notification");
+// const { initializeApp, applicationDefault, cert } = require('firebase-admin/app');
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
+var apn = require('apn');
+const fs = require('fs')
+
+
+// Firebase Setups
+// const serviceAccount = require('../firbaseVeliaServiceAccount.json');
+
+// initializeApp({
+//   credential: cert(serviceAccount)
+// });
+
+const db = getFirestore();
+
+exports.addShopLocations = async function (req, res) {
+  try{
+
+  if (!req.body.locationName || !req.body.locationCountry || !req.body.locationCity || !req.body.locationStreet || !req.body.locationPostalCode || !req.body.lat || !req.body.long) return res.status(400).send({success: false, message:"Invalid Request"});
+
+//   Checking that invitation card should exist in the db then proceed further
+  let user = await UserModel.findOne({_id: req.user._id})
+      if (!user) return res.status(400).send({success: false ,message:"Shop Not Found. Please Contact Flair Support"});
+
+      req.body.location = {
+        type : "Point",
+        address : req.body.locationStreet,
+        coordinates : [ parseFloat(req.body.long), parseFloat(req.body.lat)]
+      }
+
+  let shopBranchesModel = new ShopBranchesModel();
+  shopBranchesModel.shopAdminAccountId        = req.user._id
+  shopBranchesModel.locationBanner     = req.body.locationBanner
+  shopBranchesModel.locationName     = req.body.locationName
+  shopBranchesModel.locationCountry     = req.body.locationCountry
+  shopBranchesModel.locationCity = req.body.locationCity
+  shopBranchesModel.locationStreet = req.body.locationStreet
+  shopBranchesModel.locationPostalCode = req.body.locationPostalCode
+  shopBranchesModel.monday = req.body.monday
+  shopBranchesModel.tuesday = req.body.tuesday
+  shopBranchesModel.wednesday = req.body.wednesday
+  shopBranchesModel.thursday = req.body.thursday
+  shopBranchesModel.friday = req.body.friday
+  shopBranchesModel.saturday = req.body.saturday
+  shopBranchesModel.sunday = req.body.sunday
+  shopBranchesModel.location = req.body.location
+  
+
+  shopBranchesModel.save(async function (err, data) {
+    if (err) {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        // Duplicate username
+        return res.status(400).send({ succes: false, message: 'Looks Like this meeting already exist!' });
+      }
+
+      // Some other error
+      return res.status(400).send({success: false, err ,message:"Virtual Meeting Not Created, Something Went Wrong!"});
+    }
+
+    user.businessAllBranches.push(data._id)
+    await user.save()
+
+      res.json({
+          success: true,
+          message: "Sucessfully Added!",
+          data: data
+      });
+  });
+  }catch (error) {
+      res.status(500).send({
+          success: false, message:"Server Internal Error. Contact Support"
+      });
+  }
+}
+
+// Get logged in User meeting history
+// exports.getLoggedUserMeetingHistory = async function (req, res) {
+//   try{
+//       if (!req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+//       let maxDocument = 10;
+//       let pagesSkip = 10 * req.body.page;
+
+//       // const userDate = moment().format('YYYY-MM-DD');
+//       const today = moment().startOf('day')
+//       const futureDate = new Date(Date.now() + (365 * 86400000))
+//       console.log('today',today, 'future date',futureDate, req.user._id)
+//   let meetingHistory = await MeetingHistoryModel.find({ $or:[ {'invitationCreatorUserId':"635fb08b9db04e00184e64c2"}, {'invitationAcceptorUserId':"635fb08b9db04e00184e64c2"}]}).skip(parseFloat(pagesSkip))
+//   .limit(maxDocument).sort({meetingDate: -1})
+//   if (!meetingHistory) return res.status(400).send({success: false, message:"Not Found"});
+      
+  
+//       res.json({
+//           success: true,
+//           message: "meeting history Detail",
+//           data: meetingHistory
+//       });
+//   }catch (error) {
+//       res.status(500).send({
+//           success: false,error, message:"Server Internal Error"
+//       });
+//   }
+// }

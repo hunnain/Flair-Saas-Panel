@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <input type="file" onchange="readData(this)" />
+    <div id="myImg" >
+
+    </div>
+    <button id="room-button" >click karna bhai</button>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="https://cdn.socket.io/3.1.3/socket.io.min.js" integrity="sha384-cPwlPLvBTa3sKAgddT6krw0cJat7egBga3DJepJyrLl4Q9/5WLra3rrnMcyTyOnh" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <!-- <script>
+        $(function () {
+          const socket = io('http://localhost:5000', {
+    reconnectionDelay: 1000,
+    reconnection: true,
+    reconnectionAttemps: 10,
+    transports: ['websocket'],
+    agent: false,
+    upgrade: false,
+    rejectUnauthorized: false
+});
+          // var socket = io();
+          $('form').submit(function(e){
+            e.preventDefault(); // prevents page reloading
+            socket.emit('chatmessage', {msg:$('#m').val(),sender:'5cfec35f7ab11e23ae53c017', reciever:'5cfec38a7ab11e23ae53c019'});
+            $('#m').val('');
+            return false;
+          });
+          socket.on('chatmessage', function(data){
+            $('#messages').append($('<li>').text(data.msg));
+          });
+          // socket.on('chat media' , (data) =>{
+          //   console.log(data)
+          //     document.getElementById('myImg').innerHTML = `<img src="${data.media}" />`
+          //   })
+          document.getElementById('room-button').addEventListener('click' , () =>{
+            socket.emit('join_room' , {sender:'5cfec35f7ab11e23ae53c017', reciever:'5cfec38a7ab11e23ae53c019'})
+          })
+        });
+        // function openConnection(){
+        //   var socket = io();
+        //   console.log('connection established ' , socket)
+        //   // navigator.geolocation.watchPosition((pos) =>{
+        //   //   console.log(pos)
+        //   // })
+        // }
+        function readData(img){
+          var socket = io();
+            // console.log(img.files[0])
+            socket.emit('chat media' ,  {sender:'5cfec35f7ab11e23ae53c017', reciever:'5cfec38a7ab11e23ae53c019'})
+        
+          }
+      </script> -->
+ 
+  </body>
+</html>
