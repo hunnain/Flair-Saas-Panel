@@ -47,18 +47,19 @@ exports.loginForAdminPanel = async (req, res) => {
             subUser.notificationToken.push(req.body.notificationToken)
         }
 
-        await subUser.save(async function (err, userData) {
+        subUser.save(async function (err, userData) {
 
             userData.password = undefined;
             delete userData.password;
             res.send({
                 success: true,
-                userData,
+                // userData,
                 token
             });
         })
     }
     
+    if(user){
     const passwordCompare = await bcrypt.compare(
         req.body.password,
         user.password
@@ -88,7 +89,9 @@ exports.loginForAdminPanel = async (req, res) => {
                 token
             });
         })
+    }
     }catch (error) {
+        console.log("errr",error)
         res.status(500).send({
             success: false,error, message:"Server Internal Error"
         });
