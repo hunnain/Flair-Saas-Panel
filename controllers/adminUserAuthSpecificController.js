@@ -60,14 +60,353 @@ exports.changeAdminPasswordForOnbarding = async function (req, res) {
 
 };
 
+// Update Email only for Main Admin & Sub Admin
+exports.checkingPasswordForEmailUpdateAdmin = async function (req, res) {
+    try {
+        if (!req.body.password) return res.status(400).send({success: false, message:"Invalid Request"});
+        const user = await UserModel.findOne({
+            email: req.user.email,
+        });
+        if(!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                email: req.user.email
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+
+            const passwordCompare = await bcrypt.compare(
+                req.body.password,
+                subUser.password
+            );
+            if (!passwordCompare) return res.status(400).send({success: false, message:"Credentials Incorrect"})
+    
+            res.json({
+                success: true,
+                message: "Password is Correct!"
+            });
+        }
+
+        const passwordCompare = await bcrypt.compare(
+            req.body.password,
+            user.password
+        );
+        if (!passwordCompare) return res.status(400).send({success: false, message:"Credentials Incorrect"})
+
+        res.json({
+            success: true,
+            message: "Password is Correct!"
+        });
+
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
+
+// Update Email for Admin and Sub Admin
+exports.updateEmail = async function (req, res) {
+    try {
+        if (!req.body.newEmail) return res.status(400).send({success: false, message:"Invalid Request"});
+        const user = await UserModel.findOne({
+            email: req.user.email,
+        });
+        if(!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                email: req.user.email
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+             
+            const userEmailChecking = await UserModel.findOne({
+                email: req.body.newEmail,
+            });
+            if (userEmailChecking) return res.status(400).send({success: false, message:"This Email is already Exist!"});           
+
+            subUser.email = req.body.newEmail
+        
+            await subUser.save(async function (err, subUser) {
+                if (err) {
+                    if (err.name === 'MongoError' && err.code === 11000) {
+                      // Duplicate username
+                      return res.status(400).send({ succes: false, message: 'Some Data is Wrong or Email is already Exist' });
+                    }
+              
+                    // Some other error
+                    return res.status(400).send({success: false, message: err});
+                  }
+        
+                res.send({
+                    success: true,
+                    message: "Email Updated!"
+                });
+            });
+            
+        }
+
+        // Checking in Sub Admin that this emaill exist or not
+        const subAdminEmailChecking = await SubAdminModel.findOne({
+            email: req.body.newEmail
+        })
+        if (subAdminEmailChecking) return res.status(400).send({success: false, message:"This Email is already Exist!"});
+         
+        user.email = req.body.newEmail
+        
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Some Data is Wrong or Email is already Exist' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+    
+            res.send({
+                success: true,
+                message: "Email Updated!"
+            });
+        });
+
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
+
+// Send OTP on Admin or Sub Admin phone Number in order to change mobile number
+exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
+    try {
+        const user = await UserModel.findOne({
+            email: req.user.email,
+        });
+        if(!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                email: req.user.email
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+
+            // Mobile Verification
+            subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
+                
+            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
+
+            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+
+            await subUser.save(async function (err, subUser) {
+                if (err) {
+                    if (err.name === 'MongoError' && err.code === 11000) {
+                    // Duplicate username
+                    return res.status(400).send({ succes: false, message: 'Some Data is Wrong!' });
+                    }
+            
+                    // Some other error
+                    return res.status(400).send({success: false, message: err});
+                }
+
+                // Twillio Comes here
+
+                res.send({
+                    success: true,
+                    message: "OTP Send"
+                });
+            });
+        }
+
+            // Mobile Verification
+        user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
+    
+        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
+
+        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+        user.mobileVerifyTokenExpires = momentConversionForDb;
+
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Some Data is Wrong!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+    
+            // Twillio Comes here
+    
+            res.send({
+                success: true,
+                message: "OTP Send"
+            });
+        });
+
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
+
+// Verify Otp For Mobile Number Change
+exports.verifyOtpForMobileNumberChange = async function (req, res) {
+    try {
+        if (!req.body.otp) return res.status(400).send({success: false, message:"Invalid Request"});
+        const user = await UserModel.findOne({
+            email: req.user.email,
+            mobileVerifyToken: req.body.otp
+        });
+        if(!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                email: req.user.email,
+                mobileVerifyToken: req.body.otp
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+             
+            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+            res.send({
+                success: true,
+                message: "OTP Correct!"
+            });
+            
+        }
+        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+        res.send({
+            success: true,
+            message: "OTP Correct!"
+        });
+
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
+
 // Update API For shop data which will use to add more data
 exports.updateInitialShopDetails = async function (req, res) {
     try {
      
     const user = await UserModel.findOne({
-        _id: req.user._id,
+        email: req.user.email,
     });
-    if (!user) return res.status(400).send({success: false, message:"User Not Found. Please contact Flair Support"});
+    // if (!user) return res.status(400).send({success: false, message:"User Not Found. Please contact Flair Support"});
+    if(!user){
+    // Sub Admin Updating Details
+    const subUser = await SubAdminModel.findOne({
+        email: req.user.email
+    })
+    if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+
+    // Sub Admin Business Main account for bussiness update
+    const businessUpdates = await UserModel.findOne({
+        _id: subUser.mainAdminShopAccount,
+    });
+    
+    if(req.body.firstName){
+        subUser.firstName  = req.body.firstName        
+    }
+    if(req.body.lastName){
+        subUser.lastName   = req.body.lastName     
+    }
+    if(req.body.mobile){
+        subUser.mobile   = req.body.mobile
+    }
+    if(req.body.adminUserLogo){
+        subUser.adminUserLogo =  req.body.adminUserLogo 
+    }
+    if(req.body.userCurrentPassword && req.body.userNewPassword){
+        const passwordCompare = await bcrypt.compare(
+            req.body.userCurrentPassword,
+            subUser.password
+        );
+        if (!passwordCompare) return res.status(400).send({success: false, message:"Password Incorrect"})
+        const hash = await bcrypt.hash(req.body.userNewPassword, 10);
+        subUser.password   = hash
+    }
+
+    // Bussiness Update Here
+    if(req.body.businessLogo){
+        businessUpdates.businessLogo = req.body.businessLogo
+    }
+    if(req.body.businessName){
+        businessUpdates.businessName = req.body.businessName
+    }
+    if(req.body.businessCountry){
+        businessUpdates.businessCountry = req.body.businessCountry
+    }
+    if(req.body.businessState){
+        businessUpdates.businessState = req.body.businessState
+    }
+    if(req.body.businessCity){
+        businessUpdates.businessCity = req.body.businessCity
+    }
+    if(req.body.businessAddress){
+        businessUpdates.businessAddress = req.body.businessAddress
+    }
+    if(req.body.businessStaffSize){
+        businessUpdates.businessStaffSize = req.body.businessStaffSize
+    }
+    if(req.body.businessWebsite){
+        businessUpdates.businessWebsite = req.body.businessWebsite
+    }
+    if(req.body.businessGoogleReviews){
+        businessUpdates.businessGoogleReviews = req.body.businessGoogleReviews
+    }
+    if(req.body.businessFacebookPage){
+        businessUpdates.businessFacebookPage = req.body.businessFacebookPage
+    }
+    if(req.body.businessInstagramPage){
+        businessUpdates.businessInstagramPage = req.body.businessInstagramPage
+    }
+    if(req.body.businessPricingPlan){
+        businessUpdates.businessPricingPlan = req.body.businessPricingPlan
+    }
+    if(req.body.businessContacts){
+        businessUpdates.businessContacts = req.body.businessContacts
+    }
+    if(req.body.businessAppLogo){
+        businessUpdates.businessAppLogo = req.body.businessAppLogo
+    }
+    if(req.body.businessContractAccepted){
+        businessUpdates.businessContractAccepted = req.body.businessContractAccepted
+    }
+    if(req.body.bookingPaymentWithCard){
+        businessUpdates.bookingPaymentWithCard = req.body.bookingPaymentWithCard
+    }
+    if(req.body.businessStartingTheme){
+        businessUpdates.businessStartingTheme = req.body.businessStartingTheme
+    }
+    if(req.body.businessSelectedTheme){
+        businessUpdates.businessSelectedTheme = req.body.businessSelectedTheme
+    }
+    await subUser.save(async function (err, user) {
+        if (err) {
+            if (err.name === 'MongoError' && err.code === 11000) {
+              // Duplicate username
+              return res.status(400).send({ succes: false, message: 'Some Data is Wrong!' });
+            }
+      
+            // Some other error
+            return res.status(400).send({success: false, message: err});
+          }
+
+        businessUpdates.save();
+
+        res.send({
+            success: true,
+            message: "Data Updated!"
+        });
+    });
+
+
+    }
     
     if(req.body.firstName){
         user.firstName  = req.body.firstName        
@@ -75,11 +414,11 @@ exports.updateInitialShopDetails = async function (req, res) {
     if(req.body.lastName){
         user.lastName   = req.body.lastName     
     }
+    if(req.body.mobile){
+        user.mobile   = req.body.mobile
+    }
     if(req.body.adminUserLogo){
         user.adminUserLogo =  req.body.adminUserLogo 
-    }
-    if(req.body.email){
-        user.email =  req.body.email 
     }
     if(req.body.userCurrentPassword && req.body.userNewPassword){
         const passwordCompare = await bcrypt.compare(

@@ -1,4 +1,5 @@
 const UserModel = require('../models/shopAdminSignup');
+const SubAdminModel = require('../models/adminPanelSubAdminAccount');
 const bcrypt    = require("bcrypt")
 const jwt 	    = require('jsonwebtoken');
 const GroupModel = require("../models/groups");
@@ -20,7 +21,43 @@ exports.loginForAdminPanel = async (req, res) => {
     const user = await UserModel.findOne({
 		email: req.body.email
 	})
-    if (!user) return res.status(400).send({success: false, message:"User Not Found"});
+    // if (!user) return res.status(400).send({success: false, message:"User Not Found"});
+    // If Main Admin user not found then check in sub admin, If it was sub admin then it will login here
+    if(!user){
+        // Sub Admin Login Here
+        const subUser = await SubAdminModel.findOne({
+            email: req.body.email
+        })
+        if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
+
+        const passwordCompare = await bcrypt.compare(
+            req.body.password,
+            subUser.password
+        );
+        if (!passwordCompare) return res.status(400).send({success: false, message:"Credentials Incorrect"})
+
+        const token = generateAccessToken({
+            _id     : subUser.mainAdminShopAccount,
+            email   : subUser.email,
+            firstName: subUser.firstName,
+            lastName: subUser.lastName,
+        });
+        
+        if(req.body.notificationToken){
+            subUser.notificationToken.push(req.body.notificationToken)
+        }
+
+        await subUser.save(async function (err, userData) {
+
+            userData.password = undefined;
+            delete userData.password;
+            res.send({
+                success: true,
+                userData,
+                token
+            });
+        })
+    }
     
     const passwordCompare = await bcrypt.compare(
         req.body.password,
@@ -32,8 +69,8 @@ exports.loginForAdminPanel = async (req, res) => {
         const token = generateAccessToken({
             _id     : user._id,
             email   : user.email,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
+            firstName: user.firstName,
+            lastName: user.lastName,
         });
         
         if(req.body.notificationToken){
@@ -43,8 +80,8 @@ exports.loginForAdminPanel = async (req, res) => {
         // user.platform = req.body.platform
         await user.save(async function (err, userData) {
 
-            user.password = undefined;
-            delete user.password;
+            userData.password = undefined;
+            delete userData.password;
             res.send({
                 success: true,
                 userData,

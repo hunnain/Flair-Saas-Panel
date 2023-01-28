@@ -9,5 +9,8 @@ router.route('/updatemobile')			.post(controller.updateMobileandSendOtpToAdminUs
 router.route('/resendmobileotp')			.post(controller.resendMobileOtpForAdminUser)
 router.route('/verifymobileotp')			.post(controller.verifyOtpForAdminUser)
 router.route('/subadminsignup')			.post(controller.subAdminSignupOfShop)
+router.route('/passwordcheck')			.post(controller.checkingPasswordForEmailUpdateAdmin)
+router.route('/sendotpmobilechange')			.post(controller.sendOTPOnNumberForMobileNumberChange)
+router.route('/verifyotpmobilechange')			.post(controller.verifyOtpForMobileNumberChange)
 
 module.exports = router;
