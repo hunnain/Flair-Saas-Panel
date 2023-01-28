@@ -86,6 +86,8 @@ exports.checkingPasswordForEmailUpdateAdmin = async function (req, res) {
             });
         }
 
+        if(user){
+
         const passwordCompare = await bcrypt.compare(
             req.body.password,
             user.password
@@ -96,6 +98,7 @@ exports.checkingPasswordForEmailUpdateAdmin = async function (req, res) {
             success: true,
             message: "Password is Correct!"
         });
+    }
 
     }catch (error) {
         res.status(500).send({
@@ -144,6 +147,8 @@ exports.updateEmail = async function (req, res) {
             
         }
 
+
+        if(user){
         // Checking in Sub Admin that this emaill exist or not
         const subAdminEmailChecking = await SubAdminModel.findOne({
             email: req.body.newEmail
@@ -168,6 +173,7 @@ exports.updateEmail = async function (req, res) {
                 message: "Email Updated!"
             });
         });
+    }
 
     }catch (error) {
         res.status(500).send({
@@ -217,6 +223,8 @@ exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
             });
         }
 
+
+        if(user){
             // Mobile Verification
         user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
@@ -243,6 +251,7 @@ exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
                 message: "OTP Send"
             });
         });
+    }
 
     }catch (error) {
         res.status(500).send({
@@ -275,12 +284,16 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
             });
             
         }
+
+        if(user){
+
         if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
 
         res.send({
             success: true,
             message: "OTP Correct!"
         });
+    }
 
     }catch (error) {
         res.status(500).send({
