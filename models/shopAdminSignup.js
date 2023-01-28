@@ -93,6 +93,7 @@ const UserSchema = new Schema({
         default: false
     },
     businessAllBranches: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
+    businessAllSubAdmin: [{ type : mongoose.Schema.Types.ObjectId, ref: 'subadminaccounts' }],
     bookingPaymentWithCard:{
         type: Boolean,
         default: true

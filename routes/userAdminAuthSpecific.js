@@ -8,5 +8,6 @@ router.route('/updatebusinessdetail')			.post(controller.updateInitialShopDetail
 router.route('/updatemobile')			.post(controller.updateMobileandSendOtpToAdminUser)
 router.route('/resendmobileotp')			.post(controller.resendMobileOtpForAdminUser)
 router.route('/verifymobileotp')			.post(controller.verifyOtpForAdminUser)
+router.route('/subadminsignup')			.post(controller.subAdminSignupOfShop)
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const UserFreeTimeModel = require('../models/userFreeTime');
 const InitialOnbardingUsersMobileModel = require('../models/initialOnbardingUsersMobile')
 const UserModel = require('../models/shopAdminSignup')
+const SubAdminModel = require('../models/adminPanelSubAdminAccount');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -271,4 +272,59 @@ exports.verifyOtpForAdminUser = async (req, res) => {
             success: false,error, message:"Server Internal Error"
         });
     }
+};
+
+// Create Sub Admins for admin panel
+exports.subAdminSignupOfShop = async function (req, res) {
+    try {
+    if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName || !req.body.mobile) return res.status(400).send({success: false, message:"Invalid Request"});
+
+    const userChecking = await UserModel.findOne({
+		email: req.body.email,
+        _id: req.user._id
+	})
+    if (userChecking) return res.status(400).send({success: false, message:"Email already exist"});
+    
+    var user = new SubAdminModel();
+    user.mainAdminShopAccount = req.user._id
+    user.email =  req.body.email
+    user.firstName =  req.body.firstName
+    user.lastName =  req.body.lastName
+    user.mobile =  req.body.mobile
+    user.isMobileVerified =  false
+    user.isEmailVerified =  false
+    user.isPasswordChange =  false
+    const hash = await bcrypt.hash(req.body.password, 10);
+    user.password   = hash
+    
+    // const customer = await stripe.customers.create({
+    //     email:req.body.email.toLowerCase(),
+    //     name: req.body.userName,
+
+    // })
+    // user.stripeCustomerId = customer.id
+
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'User already exist!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+            
+
+            res.send({
+                success: true,
+                message: "Signup Sucessfully!"
+            });
+        });        
+    } catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+    
 };
