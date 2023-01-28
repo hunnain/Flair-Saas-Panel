@@ -316,6 +316,14 @@ exports.updateInitialShopDetails = async function (req, res) {
         subUser.lastName   = req.body.lastName     
     }
     if(req.body.mobile){
+        const mobileCheckingSubAdmin = await SubAdminModel.findOne({
+            mobile: req.body.mobile
+        })
+        if (mobileCheckingSubAdmin) return res.status(400).send({success: false, message:"Mobile already exist"});
+        const mobileCheckingMainAdmin = await UserModel.findOne({
+            mobile: req.body.mobile
+        })
+        if (mobileCheckingMainAdmin) return res.status(400).send({success: false, message:"Mobile already exist"}); 
         subUser.mobile   = req.body.mobile
     }
     if(req.body.adminUserLogo){
@@ -415,6 +423,14 @@ exports.updateInitialShopDetails = async function (req, res) {
         user.lastName   = req.body.lastName     
     }
     if(req.body.mobile){
+        const mobileCheckingSubAdmin = await SubAdminModel.findOne({
+            mobile: req.body.mobile
+        })
+        if (mobileCheckingSubAdmin) return res.status(400).send({success: false, message:"Mobile already exist"});
+        const mobileCheckingMainAdmin = await UserModel.findOne({
+            mobile: req.body.mobile
+        })
+        if (mobileCheckingMainAdmin) return res.status(400).send({success: false, message:"Mobile already exist"}); 
         user.mobile   = req.body.mobile
     }
     if(req.body.adminUserLogo){
