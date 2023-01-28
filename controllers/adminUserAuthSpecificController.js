@@ -415,7 +415,10 @@ exports.updateInitialShopDetails = async function (req, res) {
 
 
     }
-    
+
+
+    if(user){
+        
     if(req.body.firstName){
         user.firstName  = req.body.firstName        
     }
@@ -524,8 +527,10 @@ exports.updateInitialShopDetails = async function (req, res) {
                 success: true,
                 message: "Shop Data Updated!"
             });
-        });        
+        });      
+    }  
     } catch (error) {
+        console.log("errr",error)
         res.status(500).send({
             success: false, message:"Server Internal Error"
         });
@@ -652,6 +657,18 @@ exports.subAdminSignupOfShop = async function (req, res) {
 		email: req.body.email
 	})
     if (userChecking) return res.status(400).send({success: false, message:"Email already exist"});
+
+
+    // Mobile Checking
+    const userSubAdminMobileChecking = await SubAdminModel.findOne({
+		mobile: req.body.mobile
+	})
+    if (userSubAdminMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});
+
+    const userAdminMobileChecking = await UserModel.findOne({
+		mobile: req.body.mobile
+	})
+    if (userAdminMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});
 
     // Admin Account
     const adminAccount = await UserModel.findOne({
