@@ -147,6 +147,6 @@ const ShopBarberSchema = new Schema({
 //     this.resetPasswordExpires = Date.now() + 3600000; //expires in an hour
 // };
 
-const ShopBarbersModel = mongoose.model('shopcustomers', ShopBarberSchema);
+const ShopBarbersModel = mongoose.model('shopbarbers', ShopBarberSchema);
 
 module.exports  = ShopBarbersModel;
