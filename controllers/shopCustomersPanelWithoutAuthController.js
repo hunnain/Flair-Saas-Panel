@@ -18,7 +18,7 @@ function generateAccessToken(userObj) {
 	return jwt.sign(userObj, TOKEN_SECRET, { expiresIn: '15d' });
 }
 
-// Signup for the Admin of shop
+// Signup for the Customer of shop
 exports.signupCustomerOfShop = async function (req, res) {
     try {
     if (!req.body.email || !req.body.shopAdminAccountId || !req.body.password || !req.body.mobile || !req.body.firstName || !req.body.lastName || !req.body.gender || !req.body.dob) return res.status(400).send({success: false, message:"Invalid Request"});
@@ -34,6 +34,12 @@ exports.signupCustomerOfShop = async function (req, res) {
         shopAdminAccountId: req.body.shopAdminAccountId
 	})
     if (userMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});  
+
+        // Checking Shop ID
+        const adminuser = await UserModel.findOne({
+            _id: req.body.shopAdminAccountId
+        })
+        if (!adminuser) return res.status(400).send({success: false, message:"Shop Not Found"});
     
     var shopCustomersModel = new ShopCustomersModel();
     shopCustomersModel.shopAdminAccountId =  req.body.shopAdminAccountId
@@ -74,7 +80,9 @@ exports.signupCustomerOfShop = async function (req, res) {
                 // Some other error
                 return res.status(400).send({success: false, message: err});
               }
-
+            //   Saving this user in admin main model so in every sense customer and admin will be connected with each other
+              adminuser.businessAllCustomers.push(shopCustomersModel._id)
+              adminuser.save();
              // Twillio Send Otp
 
             res.send({

@@ -44,16 +44,6 @@ const ShopBarberSchema = new Schema({
         trim: true,
         required: true
     },
-    accountProvider: {
-        type: String,
-        trim: true,
-        required: true
-    },
-    accountProvider: {
-        type: String,
-        trim: true,
-        required: true
-    },
     role: {
         type: String,
         trim: true

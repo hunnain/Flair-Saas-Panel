@@ -497,6 +497,7 @@ var invitationCard 	= require('./routes/invitationCard');
 var virtualMeeting 	= require('./routes/virtualMeeting');
 var addShopLocation 	= require('./routes/addShopLocation');
 var shopCustomersWithoutAuth = require('./routes/shopCustomerPanelWithoutAuth');
+var shopBarbersWithoutAuth = require('./routes/shopBarberPanel');
 
 //Routes Binding 
 app.use('/', indexRouter)
@@ -509,6 +510,7 @@ app.use('/invitationcard', authenticationMiddleware, invitationCard)
 app.use('/virtualmeeting', authenticationMiddleware, virtualMeeting)
 app.use('/shoplocation', authenticationMiddleware, addShopLocation)
 app.use('/customer', shopCustomersWithoutAuth)
+app.use('/barber', authenticationMiddleware, shopBarbersWithoutAuth)
 // app.use('/web', websiteRouter)
 
 // catch 404 and forward to error handler
