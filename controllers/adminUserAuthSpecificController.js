@@ -558,17 +558,47 @@ exports.updateMobileandSendOtpToAdminUser = async (req, res) => {
         
         // Check Mobile is exist or not
         const userMobileChecking = await UserModel.findOne({
-            mobile: req.body.mobile,
-            shopAdminAccountId: req.body.shopAdminAccountId
+            mobile: req.body.mobile
         })
         if (userMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});
+        // Sub Admin Checking as well
+        const userSubAdminMobileChecking = await SubAdminModel.findOne({
+            mobile: req.body.mobile
+        })
+        if (userSubAdminMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});
 
         const user = await UserModel.findOne({
             _id: req.user._id,
             email: req.body.email
         })
-        if (!user) return res.status(400).send({success: false, message:"Sorry information is incorrect"});
+        if (!user){
+            const subUser = await SubAdminModel.findOne({
+                mainAdminShopAccount: req.user._id,
+                email: req.body.email
+            })  
+            if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});
+            
+            // Mobile Verification
+            subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
+                
+            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
 
+            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+
+            subUser.mobile = req.body.mobile
+                await subUser.save(async function (err, userData) {
+
+                    // Twillio Send Otp
+
+                    res.send({
+                        success: true,
+                        message: "Otp Send"
+                    });
+                })
+        };
+
+        if(user){
             // Mobile Verification
             user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
@@ -587,6 +617,7 @@ exports.updateMobileandSendOtpToAdminUser = async (req, res) => {
                 message: "Otp Send"
             });
         })
+    }
     }catch (error) {
         res.status(500).send({
             success: false,error, message:"Server Internal Error"
@@ -604,8 +635,36 @@ exports.resendMobileOtpForAdminUser = async (req, res) => {
             _id: req.user._id,
             email: req.body.email
         })
-        if (!user) return res.status(400).send({success: false, message:"Sorry information is incorrect"});
+        // if (!user) return res.status(400).send({success: false, message:"Sorry information is incorrect"});
+        if (!user){
+            // Sub User
+            const subUser = await SubAdminModel.findOne({
+                mobile: req.body.mobile,
+                mainAdminShopAccount: req.user._id,
+                email: req.body.email
+            })  
+            if (!subUser) return res.status(400).send({success: false, message:"Sorry information is incorrect"});
 
+            // Mobile Verification
+            subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
+    
+            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
+
+            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+
+        await subUser.save(async function (err, userData) {
+
+            // Twillio Send Otp
+
+            res.send({
+                success: true,
+                message: "Otp Send"
+            });
+        })
+        }
+
+        if(user){
             // Mobile Verification
             user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
@@ -623,6 +682,7 @@ exports.resendMobileOtpForAdminUser = async (req, res) => {
                 message: "Otp Send"
             });
         })
+    }
     }catch (error) {
         res.status(500).send({
             success: false,error, message:"Server Internal Error"
@@ -641,8 +701,30 @@ exports.verifyOtpForAdminUser = async (req, res) => {
             mobileVerifyToken: req.body.otp,
             email: req.body.email
         })
-        if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
+        // if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
+        if (!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                mobile: req.body.mobile,
+                mainAdminShopAccount: req.user._id,
+                mobileVerifyToken: req.body.otp,
+                email: req.body.email
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
+            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+            subUser.isMobileVerified = true
+            await subUser.save(async function (err, userData) {
+    
+                res.send({
+                    success: true,
+                    message: "Otp Verified!"
+                });
+            })            
+        }
+
+        if(user){
         if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
 
         user.isMobileVerified = true
@@ -653,6 +735,7 @@ exports.verifyOtpForAdminUser = async (req, res) => {
                 message: "Otp Verified!"
             });
         })
+    }
     }catch (error) {
         console.log('err',error)
         res.status(500).send({
