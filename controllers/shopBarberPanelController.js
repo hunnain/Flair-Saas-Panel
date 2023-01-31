@@ -131,3 +131,107 @@ exports.signupBarberOfShop = async function (req, res) {
     }
 
 };
+
+// Update Barber Profile data
+exports.updateBarber = async function (req, res) {
+    try {
+        if (!req.body.barberId || !req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+    const user = await ShopBarbersModel.findOne({
+        _id: req.body.barberId,
+        shopAdminAccountId: req.body.shopAdminAccountId
+    });
+    if (!user) return res.status(400).send({success: false, message:"User Not Found. Please contact Flair Support"});
+    
+    if(req.body.firstName){
+        user.firstName  = req.body.firstName        
+    }
+    if(req.body.lastName){
+        user.lastName   = req.body.lastName     
+    }
+    if(req.body.userProfileLogo){
+        user.userProfileLogo =  req.body.userProfileLogo 
+    }
+    if(req.body.email){
+        const emailChecking = await ShopBarbersModel.findOne({
+            email: req.body.email,
+            shopAdminAccountId: req.body.shopAdminAccountId
+        })
+        if (emailChecking) return res.status(400).send({success: false, message:"Email already exist"}); 
+        user.email = req.body.email
+    }
+    if(req.body.userCurrentPassword && req.body.userNewPassword){
+        const passwordCompare = await bcrypt.compare(
+            req.body.userCurrentPassword,
+            user.password
+        );
+        if (!passwordCompare) return res.status(400).send({success: false, message:"Password Incorrect"})
+        const hash = await bcrypt.hash(req.body.userNewPassword, 10);
+        user.password   = hash
+    }
+    if(req.body.mobile){
+        const userMobileChecking = await ShopBarbersModel.findOne({
+            mobile: req.body.mobile,
+            shopAdminAccountId: req.body.shopAdminAccountId
+        })
+        if (userMobileChecking) return res.status(400).send({success: false, message:"Mobile already exist"});
+        user.mobile = req.body.mobile
+    }
+    if(req.body.isOnCommission){
+        user.isOnCommission = req.body.isOnCommission
+    }
+    if(req.body.role){
+        user.role = req.body.role
+    }
+    if(req.body.isOnRent){
+        user.isOnRent = req.body.isOnRent
+    } 
+    if(req.body.commissionPayoutFrequency){
+        user.commissionPayoutFrequency = req.body.commissionPayoutFrequency
+    }
+    if(req.body.rentCollectionFrequency){
+        user.rentCollectionFrequency = req.body.rentCollectionFrequency
+    }
+    if(req.body.commisionPayStructure){
+        user.commisionPayStructure = req.body.commisionPayStructure
+    }
+    if(req.body.rentPayStructure){
+        user.rentPayStructure = req.body.rentPayStructure
+    } 
+    if(req.body.dob){
+        user.dob = req.body.dob
+    }
+    if(req.body.workingLocation){
+        user.workingLocation.push(req.body.workingLocation)
+    } 
+    // const customer = await stripe.customers.create({
+    //     email:req.body.email.toLowerCase(),
+    //     name: req.body.userName,
+
+    // })
+    // user.stripeCustomerId = customer.id
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'User already exist!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+            
+
+            res.send({
+                data: user._id,
+                success: true,
+                message: "Updated!"
+            });
+        });        
+    } catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+
+};

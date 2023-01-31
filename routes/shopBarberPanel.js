@@ -3,7 +3,7 @@ var router 		= express.Router()
 var controller 	= require('../controllers/shopBarberPanelController')
 
 router.route('/signupbarberofshop')			.post(controller.signupBarberOfShop)
-// router.route('/googlecreate')			.post(controller.googleCreate)
+router.route('/updatebarber')			.post(controller.updateBarber)
 // router.route('/facebookcreate')			.post(controller.facebookCreate)
 // router.route('/reportplate')			.post(controller.reportPlate)
 // router.route('/reportchat')			.post(controller.reportChat)
