@@ -200,8 +200,20 @@ exports.updateBarber = async function (req, res) {
     if(req.body.dob){
         user.dob = req.body.dob
     }
+    if(req.body.gender){
+        user.gender = req.body.gender
+    }
+    if(req.body.about){
+        user.about = req.body.about
+    }
+    if(req.body.instagram){
+        user.instagram = req.body.instagram
+    }
     if(req.body.workingLocation){
         user.workingLocation.push(req.body.workingLocation)
+    }
+    if(req.body.barberPhotosGallery){
+        user.barberPhotosGallery.push(req.body.barberPhotosGallery)
     } 
     // const customer = await stripe.customers.create({
     //     email:req.body.email.toLowerCase(),
@@ -235,3 +247,4 @@ exports.updateBarber = async function (req, res) {
     }
 
 };
+

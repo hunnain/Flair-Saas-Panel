@@ -73,7 +73,18 @@ const ShopBarberSchema = new Schema({
     dob: {
         type: String
     },
-
+    gender: {
+        type: String
+    },
+    about: {
+        type: String
+    },
+    instagram: {
+        type: String
+    },
+    barberPhotosGallery: {
+        type: Array
+    },
     social:{
         type: String,
         default: null

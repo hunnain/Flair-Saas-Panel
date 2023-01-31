@@ -544,10 +544,11 @@ exports.verifyForgotPasswordOtp = async (req, res) => {
 // Verify Secret Code & Change Password
 exports.recoverPassword = async (req, res) => {
     try{
-        if (!req.body.password || !req.body.secretChangePasswordCode || !req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if (!req.body.password || !req.body.secretChangePasswordCode || !req.body.shopAdminAccountId || !req.body.email) return res.status(400).send({success: false, message:"Invalid Request"});
 
         const user = await ShopCustomersModel.findOne({
             shopAdminAccountId: req.body.shopAdminAccountId,
+            email: req.body.email,
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
@@ -599,7 +600,7 @@ exports.forgotPasswordSendOTPForCustomersEMAIL = async (req, res) => {
 
         await shopCustomersModel.save(async function (err, userData) {
 
-            // Twillio Send Otp
+            // Sendgrid Send Otp
 
             res.send({
                 success: true,
