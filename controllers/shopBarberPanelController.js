@@ -248,3 +248,70 @@ exports.updateBarber = async function (req, res) {
 
 };
 
+// Send OTP Barber phone Number in order to change mobile number
+exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
+    try {
+        if (!req.body.barberId || !req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+        const user = await ShopBarbersModel.findOne({
+            _id: req.body.barberId,
+            shopAdminAccountId: req.body.shopAdminAccountId
+        });
+        if(!user) return res.status(400).send({success: false, message:"Sorry Information was not correct"});
+
+            // Mobile Verification
+        user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
+    
+        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
+
+        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+        user.mobileVerifyTokenExpires = momentConversionForDb;
+
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Some Data is Wrong!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+    
+            // Twillio Comes here
+    
+            res.send({
+                success: true,
+                message: "OTP Send"
+            });
+        });
+
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
+
+// Verify Otp For Mobile Number Change
+exports.verifyOtpForMobileNumberChange = async function (req, res) {
+    try {
+        if (!req.body.otp || !req.body.barberId || !req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+        const user = await ShopBarbersModel.findOne({
+            _id: req.body.barberId,
+            mobileVerifyToken: req.body.otp,
+            shopAdminAccountId: req.body.shopAdminAccountId
+        });
+        if(!user)  return res.status(400).send({success: false, message:"Otp Incorrect"});
+
+        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+        res.send({
+            success: true,
+            message: "OTP Correct!"
+        });
+    }catch (error) {
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+}
