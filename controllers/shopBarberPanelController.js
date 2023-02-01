@@ -303,7 +303,12 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
         });
         if(!user)  return res.status(400).send({success: false, message:"Otp Incorrect"});
 
-        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        // if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+                if (user.mobileVerifyTokenExpires > Date.now()){
+                      console.log("if kai andr wala chl raha hai")
+                }else{
+                      console.log("if kai bahar wala chl raha hai")
+                }
 
         res.send({
             success: true,
