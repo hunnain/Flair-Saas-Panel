@@ -1,6 +1,7 @@
 const UserModel = require('../models/shopAdminSignup');
 const ShopBranchesModel = require("../models/shopLocation");
 const ShopCustomersModel = require("../models/shopCustomersSingup");
+const ShopBarbersModel = require("../models/shopBarberSignup");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -646,6 +647,60 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
                 message: "Otp Verified!"
             });
         })
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get All Barber to this shop
+exports.getAllBarberOfShop = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId || !req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+        let maxDocument = 8;
+        let pagesSkip = 8 * req.body.page;
+
+        const user = await ShopBarbersModel.find({
+            shopAdminAccountId: req.body.shopAdminAccountId,
+        }).skip(parseFloat(pagesSkip))
+        .limit(maxDocument)
+        if (!user.length) return res.status(400).send({success: false, message:"Barber's not found of this shop"});
+
+            res.send({
+                data: user,
+                success: true,
+                message: "Barber's list!"
+            });
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+
+// Search Barber of Shop
+exports.searchBarberOfShop = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId || !req.body.page || !req.body.search) return res.status(400).send({success: false, message:"Invalid Request"});
+        let maxDocument = 8;
+        let pagesSkip = 8 * req.body.page;
+
+        const user = await ShopBarbersModel.find({
+            firstName: { $regex: new RegExp("^" + req.body.search, "i") },
+            shopAdminAccountId: req.body.shopAdminAccountId
+        }).skip(parseFloat(pagesSkip))
+        .limit(maxDocument)
+        if (!user.length) return res.status(400).send({success: false, message:"Barber's not found"});
+
+            res.send({
+                data: user,
+                success: true,
+                message: "Barber's list!"
+            });
     }catch (error) {
         console.log("err",error)
         res.status(500).send({
