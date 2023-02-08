@@ -2,7 +2,7 @@ const UserModel = require('../models/shopAdminSignup');
 const ShopBarbersModel = require("../models/shopBarberSignup");
 const bcrypt    = require("bcrypt")
 const jwt 	    = require('jsonwebtoken');
-const moment = require('moment-timezone');
+const moment = require('moment');
 
 function generateAccessToken(userObj) {
     const TOKEN_SECRET = process.env.TOKEN_SECRET
@@ -101,7 +101,8 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-        if (user.resetPasswordExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        const expirationDate = moment(user.resetPasswordExpires);
+        if (expirationDate.isBefore(moment())) return res.status(400).send({success: false, message:"Otp Expired"});
 
         let secretChangePasswordCode = Math.floor(100000 + Math.random() * 100000).toString()
         // secretChangePasswordCode.toString();
