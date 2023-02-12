@@ -12,6 +12,9 @@ const ShopServicesCategorySchema = new Schema({
     category: {
         type: String,
     },
+    categoryDescription: {
+        type: String,
+    },
     workingLocation: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
     shopServicesAttachWithThisCategory: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopservices' }],
     created_at      : { type: Date, default: Date.now },
