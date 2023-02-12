@@ -30,6 +30,7 @@ exports.loginForShopBarbers = async (req, res) => {
             _id     : user._id,
             shopAdminAccountId   : user.shopAdminAccountId,
             email: req.body.email,
+            userType: "barber"
         });
         
         if(req.body.notificationToken){

@@ -824,3 +824,57 @@ exports.subAdminSignupOfShop = async function (req, res) {
     }
     
 };
+
+// Add Service Category
+exports.addShopServiceCategory = async (req, res) => {
+    try{
+        if (!req.body.mobile || !req.body.otp || !req.body.email) return res.status(400).send({success: false, message:"Invalid Request"});
+
+        const user = await UserModel.findOne({
+            mobile: req.body.mobile,
+            _id: req.user._id,
+            mobileVerifyToken: req.body.otp,
+            email: req.body.email
+        })
+        // if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
+        if (!user){
+            // Sub Admin
+            const subUser = await SubAdminModel.findOne({
+                mobile: req.body.mobile,
+                mainAdminShopAccount: req.user._id,
+                mobileVerifyToken: req.body.otp,
+                email: req.body.email
+            })
+            if (!subUser) return res.status(400).send({success: false, message:"OTP Incorrect"});
+
+            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+            subUser.isMobileVerified = true
+            await subUser.save(async function (err, userData) {
+    
+                res.send({
+                    success: true,
+                    message: "Otp Verified!"
+                });
+            })            
+        }
+
+        if(user){
+        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+        user.isMobileVerified = true
+        await user.save(async function (err, userData) {
+
+            res.send({
+                success: true,
+                message: "Otp Verified!"
+            });
+        })
+    }
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};

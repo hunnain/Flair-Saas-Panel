@@ -41,6 +41,7 @@ exports.loginForAdminPanel = async (req, res) => {
             email   : subUser.email,
             firstName: subUser.firstName,
             lastName: subUser.lastName,
+            userType: "admin"
         });
         
         if(req.body.notificationToken){
@@ -72,6 +73,7 @@ exports.loginForAdminPanel = async (req, res) => {
             email   : user.email,
             firstName: user.firstName,
             lastName: user.lastName,
+            userType: "admin"
         });
         
         if(req.body.notificationToken){

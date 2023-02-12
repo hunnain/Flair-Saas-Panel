@@ -30,6 +30,7 @@ exports.loginForShopCustomers = async (req, res) => {
             _id     : user._id,
             shopAdminAccountId   : user.shopAdminAccountId,
             email: req.body.email,
+            userType: "customer"
         });
         
         if(req.body.notificationToken){
