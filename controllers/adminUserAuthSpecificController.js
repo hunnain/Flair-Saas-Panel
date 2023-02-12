@@ -1,7 +1,7 @@
-const UserFreeTimeModel = require('../models/userFreeTime');
 const InitialOnbardingUsersMobileModel = require('../models/initialOnbardingUsersMobile')
 const UserModel = require('../models/shopAdminSignup')
 const SubAdminModel = require('../models/adminPanelSubAdminAccount');
+const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -828,49 +828,30 @@ exports.subAdminSignupOfShop = async function (req, res) {
 // Add Service Category
 exports.addShopServiceCategory = async (req, res) => {
     try{
-        if (!req.body.mobile || !req.body.otp || !req.body.email) return res.status(400).send({success: false, message:"Invalid Request"});
+        if (!req.body.category) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        var shopServicesCategoryModel = new ShopServicesCategoryModel();
+        shopServicesCategoryModel.shopAdminAccountId =  req.user._id
+        shopServicesCategoryModel.category =  req.body.category
+        shopServicesCategoryModel.categoryDescription =  req.body.categoryDescription
 
-        const user = await UserModel.findOne({
-            mobile: req.body.mobile,
-            _id: req.user._id,
-            mobileVerifyToken: req.body.otp,
-            email: req.body.email
-        })
-        // if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
-        if (!user){
-            // Sub Admin
-            const subUser = await SubAdminModel.findOne({
-                mobile: req.body.mobile,
-                mainAdminShopAccount: req.user._id,
-                mobileVerifyToken: req.body.otp,
-                email: req.body.email
-            })
-            if (!subUser) return res.status(400).send({success: false, message:"OTP Incorrect"});
-
-            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
-
-            subUser.isMobileVerified = true
-            await subUser.save(async function (err, userData) {
-    
-                res.send({
-                    success: true,
-                    message: "Otp Verified!"
-                });
-            })            
-        }
-
-        if(user){
-        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
-
-        user.isMobileVerified = true
-        await user.save(async function (err, userData) {
-
+        await shopServicesCategoryModel.save(async function (err, shopServicesCategoryModel) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Something Went Wrong. Contact Admin' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
             res.send({
+                data: shopServicesCategoryModel,
                 success: true,
-                message: "Otp Verified!"
+                message: "Cateorgy Added!"
             });
-        })
-    }
+        });
     }catch (error) {
         console.log('err',error)
         res.status(500).send({

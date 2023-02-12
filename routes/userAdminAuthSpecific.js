@@ -13,5 +13,6 @@ router.route('/passwordcheck')			.post(controller.checkingPasswordForEmailUpdate
 router.route('/updateemail')			.post(controller.updateEmail)
 router.route('/sendotpmobilechange')			.post(controller.sendOTPOnNumberForMobileNumberChange)
 router.route('/verifyotpmobilechange')			.post(controller.verifyOtpForMobileNumberChange)
+router.route('/addshopservicecategory')			.post(controller.addShopServiceCategory)
 
 module.exports = router;
