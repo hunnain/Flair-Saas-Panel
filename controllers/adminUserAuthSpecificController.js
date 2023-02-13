@@ -2,6 +2,7 @@ const InitialOnbardingUsersMobileModel = require('../models/initialOnbardingUser
 const UserModel = require('../models/shopAdminSignup')
 const SubAdminModel = require('../models/adminPanelSubAdminAccount');
 const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
+const ShopServicesModel = require('../models/shopServices');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -850,6 +851,97 @@ exports.addShopServiceCategory = async (req, res) => {
                 data: shopServicesCategoryModel,
                 success: true,
                 message: "Cateorgy Added!"
+            });
+        });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Add Services of the Shop
+exports.addShopServices = async (req, res) => {
+    try{
+        if (!req.body.serviceCategoryId || !req.body.serviceName || !req.body.workingLocation.length) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesCategoryChecking = await ShopServicesCategoryModel.findOne({
+            _id: req.body.serviceCategoryId,
+            shopAdminAccountId: req.user._id
+        })
+        if (!shopServicesCategoryChecking) return res.status(400).send({success: false, message:"This Category Not Exist"}); 
+
+        var shopServicesModel = new ShopServicesModel();
+        shopServicesModel.shopAdminAccountId =  req.user._id
+        shopServicesModel.serviceCategoryId =  req.body.serviceCategoryId
+        shopServicesModel.serviceName =  req.body.serviceName
+        shopServicesModel.serviceDescription =  req.body.serviceDescription
+        shopServicesModel.serviceTags =  req.body.serviceTags
+        shopServicesModel.workingLocation =  req.body.workingLocation
+
+        await shopServicesModel.save(async function (err, shopServicesModel) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Something Went Wrong. Contact Admin' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+
+              shopServicesCategoryChecking.shopServicesAttachWithThisCategory.push(shopServicesModel._id)
+              shopServicesCategoryChecking.save();
+
+            res.send({
+                data: shopServicesModel,
+                success: true,
+                message: "Service Added!"
+            });
+        });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Update Shop Category
+exports.updateShopServiceCategory = async (req, res) => {
+    try{
+        if (!req.body.categoryId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesCategoryModel = await ShopServicesCategoryModel.findOne({
+            _id: req.body.categoryId,
+            shopAdminAccountId: req.user._id
+        })
+        if (!shopServicesCategoryModel) return res.status(400).send({success: false, message:"Category Not Found"}); 
+        
+        if(req.body.category){
+            shopServicesCategoryModel.category = req.body.category
+        }
+        if(req.body.categoryDescription){
+            shopServicesCategoryModel.categoryDescription = req.body.categoryDescription
+        }
+
+        await shopServicesCategoryModel.save(async function (err, shopServicesCategoryModel) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Something Went Wrong. Contact Admin' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+            res.send({
+                data: shopServicesCategoryModel,
+                success: true,
+                message: "Cateorgy Updated!"
             });
         });
     }catch (error) {

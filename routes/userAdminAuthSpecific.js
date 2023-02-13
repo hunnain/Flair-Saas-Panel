@@ -14,5 +14,7 @@ router.route('/updateemail')			.post(controller.updateEmail)
 router.route('/sendotpmobilechange')			.post(controller.sendOTPOnNumberForMobileNumberChange)
 router.route('/verifyotpmobilechange')			.post(controller.verifyOtpForMobileNumberChange)
 router.route('/addshopservicecategory')			.post(controller.addShopServiceCategory)
+router.route('/addshopservices')			.post(controller.addShopServices)
+router.route('/updateshopservicecategory')			.post(controller.updateShopServiceCategory)   // Need to add on postman
 
 module.exports = router;

@@ -9,8 +9,14 @@ const ShopServicesSchema = new Schema({
         required: true,
         ref: 'shopsadminaccount',
     },
+    serviceCategoryId:{
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'shopservicescategories',
+    },
     serviceName: {
         type: String,
+        required: true
     },
     serviceDescription: {
         type: String,
@@ -19,7 +25,6 @@ const ShopServicesSchema = new Schema({
         type: Array,
     },
     workingLocation: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
-    shopServicesAttachWithThisCategory: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopservices' }],
     created_at      : { type: Date, default: Date.now },
 })
 
