@@ -951,3 +951,52 @@ exports.updateShopServiceCategory = async (req, res) => {
         });
     }
 };
+
+// Update Shop Services
+exports.updateShopServiceCategory = async (req, res) => {
+    try{
+        if (!req.body.serviceId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesModel = await ShopServicesModel.findOne({
+            _id: req.body.serviceId,
+            shopAdminAccountId: req.user._id
+        })
+        if (!shopServicesModel) return res.status(400).send({success: false, message:"Service Not Found"}); 
+        
+        if(req.body.serviceName){
+            shopServicesModel.serviceName = req.body.serviceName
+        }
+        if(req.body.serviceDescription){
+            shopServicesModel.serviceDescription = req.body.serviceDescription
+        }
+        if(req.body.serviceTags.length){
+            shopServicesModel.serviceTags = req.body.serviceTags
+        }
+        if(req.body.workingLocation.length){
+            shopServicesModel.workingLocation = req.body.workingLocation
+        }
+
+        await shopServicesModel.save(async function (err, shopServicesModel) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Something Went Wrong. Contact Admin' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+            res.send({
+                data: shopServicesModel,
+                success: true,
+                message: "Service Updated!"
+            });
+        });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
