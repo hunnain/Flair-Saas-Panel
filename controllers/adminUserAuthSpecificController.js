@@ -953,7 +953,7 @@ exports.updateShopServiceCategory = async (req, res) => {
 };
 
 // Update Shop Services
-exports.updateShopServiceCategory = async (req, res) => {
+exports.updateShopServices = async (req, res) => {
     try{
         if (!req.body.serviceId) return res.status(400).send({success: false, message:"Invalid Request"});
         if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
@@ -974,7 +974,7 @@ exports.updateShopServiceCategory = async (req, res) => {
             shopServicesModel.serviceTags = req.body.serviceTags
         }
         if(req.body.workingLocation.length){
-            shopServicesModel.workingLocation = req.body.workingLocation
+            shopServicesModel.workingLocation.push(serviceId)
         }
 
         await shopServicesModel.save(async function (err, shopServicesModel) {
@@ -992,6 +992,143 @@ exports.updateShopServiceCategory = async (req, res) => {
                 success: true,
                 message: "Service Updated!"
             });
+        });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get All single shops categories with it service included
+exports.getAllCategoriesOfShopWithServices = async (req, res) => {
+    try{
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesModel = await ShopServicesModel.find({
+            shopAdminAccountId: req.user._id
+        }).populate("serviceCategoryId").populate("workingLocation")
+        if (!shopServicesModel.length) return res.status(400).send({success: false, message:"Categories and services Not Found"}); 
+        
+
+            res.send({
+                data: shopServicesModel,
+                success: true,
+                message: "Services!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get Single Services Based on Id
+exports.getSingleServicesBasedOnId = async (req, res) => {
+    try{
+        if (!req.body.serviceId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesModel = await ShopServicesModel.findOne({
+            _id: req.body.serviceId
+        }).populate("serviceCategoryId").populate("workingLocation")
+        if (!shopServicesModel) return res.status(400).send({success: false, message:"Service Not Found"}); 
+        
+
+            res.send({
+                data: shopServicesModel,
+                success: true,
+                message: "Service!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get Single Category Based On Id
+exports.getSingleCategoryBasedOnId = async (req, res) => {
+    try{
+        if (!req.body.categoryId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesCategoryModel = await ShopServicesCategoryModel.findOne({
+            _id: req.body.categoryId
+        }).populate("shopServicesAttachWithThisCategory")
+        if (!shopServicesCategoryModel) return res.status(400).send({success: false, message:"Category Not Found"}); 
+        
+
+            res.send({
+                data: shopServicesCategoryModel,
+                success: true,
+                message: "Category!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get All Ctegories of Shop List
+exports.getAllCategoriesOfShopList = async (req, res) => {
+    try{
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesCategoryModel = await ShopServicesCategoryModel.find({
+            shopAdminAccountId: req.user._id
+        }).populate("shopServicesAttachWithThisCategory")
+        if (!shopServicesCategoryModel.length) return res.status(400).send({success: false, message:"Categories and services Not Found"}); 
+        
+
+            res.send({
+                data: shopServicesCategoryModel,
+                success: true,
+                message: "Categories!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Delete Single Services of Shop
+// Get All Ctegories of Shop List
+exports.deleteSingleServiceOfShop = async (req, res) => {
+    try{
+        if (!req.body.serviceId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        ShopServicesModel.findByIdAndDelete({_id: req.body.serviceId}, function(err, result) {
+            if (err) {
+                console.log("Error deleting document: ", err);
+                res.send({
+                    success: false,
+                    message: "Error deleting document!"
+                });
+                
+            } else {
+                if (result) {
+                    res.send({
+                        data: result,
+                        success: false,
+                        message: "Error deleting document!"
+                    });
+                } else {
+                    console.log("Document with ID " + serviceId + " not found");
+                    res.send({
+                        success: false,
+                        message: "Document not found"
+                    });
+                }
+            }
         });
     }catch (error) {
         console.log('err',error)
