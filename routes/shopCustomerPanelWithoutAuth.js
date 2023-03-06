@@ -20,6 +20,7 @@ router.route('/forgotpasswordemail')			.post(controller.forgotPasswordSendOTPFor
 router.route('/verifyforgotpasswordotpemail')			.post(controller.verifyForgotPasswordOtpEMAIL)
 router.route('/getallbarbersofshop')			.post(controller.getAllBarberOfShop)
 router.route('/searchbarber')			.post(controller.searchBarberOfShop)
+router.route('/allservices')			.post(controller.getAllServicesOfShop)
 // router.route('/reportplate')			.post(controller.reportPlate)
 // router.route('/reportchat')			.post(controller.reportChat)
 // router.route('/getallusers')	.post(controller.getAllUsers)

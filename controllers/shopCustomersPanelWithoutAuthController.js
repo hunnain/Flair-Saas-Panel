@@ -2,6 +2,8 @@ const UserModel = require('../models/shopAdminSignup');
 const ShopBranchesModel = require("../models/shopLocation");
 const ShopCustomersModel = require("../models/shopCustomersSingup");
 const ShopBarbersModel = require("../models/shopBarberSignup");
+const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
+const ShopServicesModel = require('../models/shopServices');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -700,6 +702,32 @@ exports.searchBarberOfShop = async (req, res) => {
                 data: user,
                 success: true,
                 message: "Barber's list!"
+            });
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Get All Services of this shop
+exports.getAllServicesOfShop = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId || !req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+        let maxDocument = 8;
+        let pagesSkip = 8 * req.body.page;
+
+        const user = await ShopServicesModel.find({
+            shopAdminAccountId: req.body.shopAdminAccountId,
+        }).skip(parseFloat(pagesSkip))
+        .limit(maxDocument)
+        if (!user.length) return res.status(400).send({success: false, message:"Service not found of this shop"});
+
+            res.send({
+                data: user,
+                success: true,
+                message: "Service list!"
             });
     }catch (error) {
         console.log("err",error)
