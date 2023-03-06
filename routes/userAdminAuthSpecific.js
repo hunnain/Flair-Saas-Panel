@@ -15,6 +15,11 @@ router.route('/sendotpmobilechange')			.post(controller.sendOTPOnNumberForMobile
 router.route('/verifyotpmobilechange')			.post(controller.verifyOtpForMobileNumberChange)
 router.route('/addshopservicecategory')			.post(controller.addShopServiceCategory)
 router.route('/addshopservices')			.post(controller.addShopServices)
-router.route('/updateshopservicecategory')			.post(controller.updateShopServiceCategory)   // Need to add on postman
+router.route('/updateshopservicecategory')			.post(controller.updateShopServiceCategory)
+router.route('/updateshopservice')			.post(controller.updateShopServices)
+router.route('/getallcategoryserviceofshop')			.post(controller.getAllCategoriesOfShopWithServices)
+router.route('/getsingleserviceofshop')			.post(controller.getSingleServicesBasedOnId)
+router.route('/getsinglecategoryofshop')			.post(controller.getSingleCategoryBasedOnId)
+router.route('/getallcategoriesofshop')			.post(controller.getAllCategoriesOfShopList)
 
 module.exports = router;
