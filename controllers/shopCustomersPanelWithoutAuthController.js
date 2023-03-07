@@ -722,12 +722,39 @@ exports.getAllServicesOfShop = async (req, res) => {
             shopAdminAccountId: req.body.shopAdminAccountId,
         }).skip(parseFloat(pagesSkip))
         .limit(maxDocument)
-        if (!user.length) return res.status(400).send({success: false, message:"Service not found of this shop"});
+        if (!user.length) return res.status(400).send({success: false, message:"No Services Available"});
 
             res.send({
                 data: user,
                 success: true,
                 message: "Service list!"
+            });
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Search Service
+exports.searchServiceOfShop = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId || !req.body.page || !req.body.search) return res.status(400).send({success: false, message:"Invalid Request"});
+        let maxDocument = 8;
+        let pagesSkip = 8 * req.body.page;
+
+        const user = await ShopServicesModel.find({
+            serviceName: { $regex: new RegExp("^" + req.body.search, "i") },
+            shopAdminAccountId: req.body.shopAdminAccountId
+        }).skip(parseFloat(pagesSkip))
+        .limit(maxDocument)
+        if (!user.length) return res.status(400).send({success: false, message:"Service not found"});
+
+            res.send({
+                data: user,
+                success: true,
+                message: "Service's list!"
             });
     }catch (error) {
         console.log("err",error)

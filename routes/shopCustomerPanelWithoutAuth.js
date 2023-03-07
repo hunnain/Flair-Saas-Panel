@@ -21,6 +21,7 @@ router.route('/verifyforgotpasswordotpemail')			.post(controller.verifyForgotPas
 router.route('/getallbarbersofshop')			.post(controller.getAllBarberOfShop)
 router.route('/searchbarber')			.post(controller.searchBarberOfShop)
 router.route('/allservices')			.post(controller.getAllServicesOfShop)
+router.route('/searchservices')			.post(controller.searchServiceOfShop)
 // router.route('/reportplate')			.post(controller.reportPlate)
 // router.route('/reportchat')			.post(controller.reportChat)
 // router.route('/getallusers')	.post(controller.getAllUsers)
