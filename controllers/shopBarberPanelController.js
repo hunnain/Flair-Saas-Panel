@@ -215,6 +215,27 @@ exports.updateBarber = async function (req, res) {
     if(req.body.barberPhotosGallery){
         user.barberPhotosGallery.push(req.body.barberPhotosGallery)
     } 
+    if(req.body.monday){
+        user.monday = req.body.monday
+    }
+    if(req.body.tuesday){
+        user.tuesday = req.body.tuesday
+    }
+    if(req.body.wednesday){
+        user.wednesday = req.body.wednesday
+    }
+    if(req.body.thursday){
+        user.thursday = req.body.thursday
+    }
+    if(req.body.friday){
+        user.friday = req.body.friday
+    }
+    if(req.body.saturday){
+        user.saturday = req.body.saturday
+    }
+    if(req.body.sunday){
+        user.sunday = req.body.sunday
+    }
     // const customer = await stripe.customers.create({
     //     email:req.body.email.toLowerCase(),
     //     name: req.body.userName,

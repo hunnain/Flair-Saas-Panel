@@ -133,6 +133,34 @@ const ShopBarberSchema = new Schema({
     secretChangePasswordCodeExpires: {
         type: Date,
     },
+    monday:{
+        startAt:String,
+        endAt:String
+    },
+    tuesday:{
+        startAt:String,
+        endAt:String
+    },
+    wednesday:{
+        startAt:String,
+        endAt:String
+    },
+    thursday:{
+        startAt:String,
+        endAt:String
+    },
+    friday:{
+        startAt:String,
+        endAt:String
+    },
+    saturday:{
+        startAt:String,
+        endAt:String
+    },
+    sunday:{
+        startAt:String,
+        endAt:String
+    },
     created_at      : { type: Date, default: Date.now },
 })
 
