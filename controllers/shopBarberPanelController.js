@@ -236,6 +236,18 @@ exports.updateBarber = async function (req, res) {
     if(req.body.sunday){
         user.sunday = req.body.sunday
     }
+    if(req.body.appointmentRequest){
+        user.appointmentRequest = req.body.appointmentRequest
+    }
+    if(req.body.noShowCharge){
+        user.noShowCharge = req.body.noShowCharge
+    }
+    if(req.body.cancellationPolicy){
+        user.cancellationPolicy = req.body.cancellationPolicy
+    }
+    if(req.body.cancellationWindowHour){
+        user.cancellationWindowHour = req.body.cancellationWindowHour
+    }
     // const customer = await stripe.customers.create({
     //     email:req.body.email.toLowerCase(),
     //     name: req.body.userName,

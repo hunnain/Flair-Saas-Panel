@@ -161,6 +161,19 @@ const ShopBarberSchema = new Schema({
         startAt:String,
         endAt:String
     },
+    appointmentRequest:{
+        type: Boolean,
+        default: false
+    },
+    noShowCharge:{
+        type: Number,
+    },
+    cancellationPolicy:{
+        type: Number,
+    },
+    cancellationWindowHour:{
+        type: Number,
+    },
     created_at      : { type: Date, default: Date.now },
 })
 
