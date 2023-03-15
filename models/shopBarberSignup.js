@@ -174,20 +174,9 @@ const ShopBarberSchema = new Schema({
     cancellationWindowHour:{
         type: Number,
     },
+    choosenServices: [{ type : mongoose.Schema.Types.ObjectId, ref: 'barberschoosenservice' }],
     created_at      : { type: Date, default: Date.now },
 })
-
-// UserSchema.methods.isValidPassword = async function(password) {
-//     const user      = this;
-//     const compare   = await bcrypt.compare(password, user.password);
-//     return compare;
-// }
-
-// Forget Passord Method
-// UserSchema.methods.generatePasswordReset = function() {
-//     this.resetPasswordToken = Math.floor(100000 + Math.random() * 900000);
-//     this.resetPasswordExpires = Date.now() + 3600000; //expires in an hour
-// };
 
 const ShopBarbersModel = mongoose.model('shopbarbers', ShopBarberSchema);
 

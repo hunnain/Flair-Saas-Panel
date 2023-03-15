@@ -1100,7 +1100,6 @@ exports.getAllCategoriesOfShopList = async (req, res) => {
 };
 
 // Delete Single Services of Shop
-// Get All Ctegories of Shop List
 exports.deleteSingleServiceOfShop = async (req, res) => {
     try{
         if (!req.body.serviceId) return res.status(400).send({success: false, message:"Invalid Request"});

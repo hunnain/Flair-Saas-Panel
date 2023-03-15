@@ -2,6 +2,8 @@ const UserModel = require('../models/shopAdminSignup');
 const ShopBranchesModel = require("../models/shopLocation");
 const ShopCustomersModel = require("../models/shopCustomersSingup");
 const ShopBarbersModel = require("../models/shopBarberSignup");
+const BarberChoosenServicesModel = require("../models/BarberChoosenServices");
+const ShopServicesModel = require("../models/shopServices");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -366,3 +368,70 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
         });
     }
 }
+
+// Add Each Barber Service
+exports.addBarberServices = async function (req, res) {
+    try {
+    if (!req.body.shopAdminAccountId || !req.body.shopServiceId || !req.body.serviceTime || !req.body.staticPricing || !req.body.dynamicPricing || !req.body.mondayPrice || !req.body.tuesdayPrice || !req.body.wednesdayPrice || !req.body.thursdayPrice || !req.body.fridayPrice || !req.body.saturdayPrice || !req.body.sundayPrice) return res.status(400).send({success: false, message:"Invalid Request"});
+    if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+
+    // Checking Barber Exist also for saving purpose
+    const shopBarbersModel = await ShopBarbersModel.findOne({
+        _id: req.user._id
+	})
+    if (!shopBarbersModel) return res.status(400).send({success: false, message:"Barber Not Found"});
+
+    // Checking Shop Service
+    const shopServicesModel = await ShopServicesModel.findOne({
+        _id: req.body.shopServiceId
+	})
+    if (!shopServicesModel) return res.status(400).send({success: false, message:"Service Not Found"});
+
+    var barberChoosenServicesModel = new BarberChoosenServicesModel();
+    barberChoosenServicesModel.shopAdminAccountId =  req.body.shopAdminAccountId
+    barberChoosenServicesModel.barberAccountId =  req.user._id
+    barberChoosenServicesModel.shopServiceId =  req.body.shopServiceId
+    barberChoosenServicesModel.serviceTime =  req.body.serviceTime
+    barberChoosenServicesModel.staticPricing =  req.body.staticPricing
+    barberChoosenServicesModel.dynamicPricing =  req.body.dynamicPricing
+    barberChoosenServicesModel.mondayPrice =  req.body.mondayPrice
+    barberChoosenServicesModel.tuesdayPrice =  req.body.tuesdayPrice
+    barberChoosenServicesModel.wednesdayPrice =  req.body.wednesdayPrice
+    barberChoosenServicesModel.thursdayPrice =  req.body.thursdayPrice
+    barberChoosenServicesModel.fridayPrice =  req.body.fridayPrice
+    barberChoosenServicesModel.saturdayPrice =  req.body.saturdayPrice
+    barberChoosenServicesModel.sundayPrice =  req.body.sundayPrice
+    barberChoosenServicesModel.barberDescription =  req.body.barberDescription
+    barberChoosenServicesModel.priceMayChange =  req.body.priceMayChange
+    
+        await barberChoosenServicesModel.save(async function (err, barberChoosenServicesModel) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'Something Went Wrong. Contact Flair Support' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+
+            //   Saving id inside barber main schema & Also saving in shopservice schema
+            shopBarbersModel.choosenServices.push(barberChoosenServicesModel._id)
+            shopServicesModel.shopBarbersAttachWithThisService.push(req.user._id)
+            await shopBarbersModel.save();
+            await shopServicesModel.save();
+
+            res.send({
+                data: barberChoosenServicesModel,
+                success: true,
+                message: "Added Service"
+            });
+        });        
+    } catch (error) {
+        console.log('errr', error)
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+
+};
