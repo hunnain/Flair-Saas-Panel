@@ -4,6 +4,7 @@ const ShopCustomersModel = require("../models/shopCustomersSingup");
 const ShopBarbersModel = require("../models/shopBarberSignup");
 const BarberChoosenServicesModel = require("../models/BarberChoosenServices");
 const ShopServicesModel = require("../models/shopServices");
+const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -386,6 +387,8 @@ exports.addBarberServices = async function (req, res) {
         _id: req.body.shopServiceId
 	})
     if (!shopServicesModel) return res.status(400).send({success: false, message:"Service Not Found"});
+    let stringifyAdminAccountId = shopServicesModel.shopAdminAccountId.toString();
+    if(stringifyAdminAccountId !== req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Sorry selected service is not available for this shop"});
 
     var barberChoosenServicesModel = new BarberChoosenServicesModel();
     barberChoosenServicesModel.shopAdminAccountId =  req.body.shopAdminAccountId
@@ -434,4 +437,29 @@ exports.addBarberServices = async function (req, res) {
         });
     }
 
+};
+
+// Get All Ctegories of Shop List
+exports.getAllCategoriesOfShopList = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const shopServicesCategoryModel = await ShopServicesCategoryModel.find({
+            shopAdminAccountId: req.body.shopAdminAccountId
+        }).populate("shopServicesAttachWithThisCategory")
+        if (!shopServicesCategoryModel.length) return res.status(400).send({success: false, message:"Categories and services Not Found"}); 
+        
+
+            res.send({
+                data: shopServicesCategoryModel,
+                success: true,
+                message: "Categories!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
 };

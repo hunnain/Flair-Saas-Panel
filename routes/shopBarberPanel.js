@@ -7,7 +7,7 @@ router.route('/updatebarber')			.post(controller.updateBarber)
 router.route('/sendotpformobilenumchange')			.post(controller.sendOTPOnNumberForMobileNumberChange)
 router.route('/verifyotpformobilenumchange')			.post(controller.verifyOtpForMobileNumberChange)
 router.route('/addbarberservices')			.post(controller.addBarberServices)
-// router.route('/getallusers')	.post(controller.getAllUsers)
+router.route('/getallservicewithcategories')	.post(controller.getAllCategoriesOfShopList)
 // router.route('/userlogout')	.post(controller.userLogout)
 // router.route('/getsingleuserprofiledetail')	.post(controller.getSingleUserProfileDetail)
 

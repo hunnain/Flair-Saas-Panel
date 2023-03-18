@@ -21,5 +21,6 @@ router.route('/getallcategoryserviceofshop')			.post(controller.getAllCategories
 router.route('/getsingleserviceofshop')			.post(controller.getSingleServicesBasedOnId)
 router.route('/getsinglecategoryofshop')			.post(controller.getSingleCategoryBasedOnId)
 router.route('/getallcategoriesofshop')			.post(controller.getAllCategoriesOfShopList)
+router.route('/deletesingleserviceofshop')			.post(controller.deleteSingleServiceOfShop)
 
 module.exports = router;

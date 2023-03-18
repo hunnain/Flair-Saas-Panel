@@ -1117,11 +1117,10 @@ exports.deleteSingleServiceOfShop = async (req, res) => {
                 if (result) {
                     res.send({
                         data: result,
-                        success: false,
-                        message: "Error deleting document!"
+                        success: true,
+                        message: "Service Deleted"
                     });
                 } else {
-                    console.log("Document with ID " + serviceId + " not found");
                     res.send({
                         success: false,
                         message: "Document not found"
