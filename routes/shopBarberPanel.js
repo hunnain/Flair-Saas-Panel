@@ -8,7 +8,7 @@ router.route('/sendotpformobilenumchange')			.post(controller.sendOTPOnNumberFor
 router.route('/verifyotpformobilenumchange')			.post(controller.verifyOtpForMobileNumberChange)
 router.route('/addbarberservices')			.post(controller.addBarberServices)
 router.route('/getallservicewithcategories')	.post(controller.getAllCategoriesOfShopList)
-// router.route('/userlogout')	.post(controller.userLogout)
+router.route('/updatebarberservice')	.post(controller.updateBarberService)
 // router.route('/getsingleuserprofiledetail')	.post(controller.getSingleUserProfileDetail)
 
 module.exports = router;

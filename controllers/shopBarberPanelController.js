@@ -439,6 +439,88 @@ exports.addBarberServices = async function (req, res) {
 
 };
 
+// Update Single Barber Service
+exports.updateBarberService = async function (req, res) {
+    try {
+        if (!req.body.shopAdminAccountId || !req.body.barberChoosenServiceId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+     console.log('data',req.user._id)
+    const user = await BarberChoosenServicesModel.findOne({
+        _id: req.body.barberChoosenServiceId,
+        barberAccountId: req.user._id,
+        shopAdminAccountId: req.body.shopAdminAccountId
+    });
+    if (!user) return res.status(400).send({success: false, message:"Service Not Found of this barber. Some info is incorrect"});
+    
+    if(req.body.barberDescription){
+        user.barberDescription  = req.body.barberDescription        
+    }
+    if(req.body.serviceTime){
+        user.serviceTime   = req.body.serviceTime     
+    }
+    if(req.body.staticPricing){
+        user.staticPricing =  req.body.staticPricing 
+    }
+    if(req.body.dynamicPricing){
+        user.dynamicPricing = req.body.dynamicPricing
+    }
+    if(req.body.priceMayChange){
+        user.priceMayChange = req.body.priceMayChange
+    }
+    if(req.body.mondayPrice){
+        user.mondayPrice = req.body.mondayPrice
+    }
+    if(req.body.tuesdayPrice){
+        user.tuesdayPrice = req.body.tuesdayPrice
+    }
+    if(req.body.wednesdayPrice){
+        user.wednesdayPrice = req.body.wednesdayPrice
+    }
+    if(req.body.thursdayPrice){
+        user.thursdayPrice = req.body.thursdayPrice
+    }
+    if(req.body.fridayPrice){
+        user.fridayPrice = req.body.fridayPrice
+    }
+    if(req.body.saturdayPrice){
+        user.saturdayPrice = req.body.saturdayPrice
+    }
+    if(req.body.sundayPrice){
+        user.sundayPrice = req.body.sundayPrice
+    }
+    // const customer = await stripe.customers.create({
+    //     email:req.body.email.toLowerCase(),
+    //     name: req.body.userName,
+
+    // })
+    // user.stripeCustomerId = customer.id
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'User already exist!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: err});
+              }
+            
+
+            res.send({
+                data: user,
+                success: true,
+                message: "Updated!"
+            });
+        });        
+    } catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false, message:"Server Internal Error"
+        });
+    }
+
+};
+
 // Get All Ctegories of Shop List
 exports.getAllCategoriesOfShopList = async (req, res) => {
     try{
