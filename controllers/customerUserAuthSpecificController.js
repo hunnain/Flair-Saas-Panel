@@ -1,6 +1,7 @@
 const UserModel = require('../models/shopAdminSignup');
 const ShopBranchesModel = require("../models/shopLocation");
 const ShopCustomersModel = require("../models/shopCustomersSingup");
+const BookingModel = require("../models/createBooking");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -93,4 +94,31 @@ exports.updateCustomer = async function (req, res) {
         });
     }
 
+};
+
+//  CHECKOUT SECTION
+exports.checkout = async (req, res) => {
+    try{
+        if (!req.body.bookingTime || !req.body.bookingDate || !req.body.bookingBranch || !req.body.selectedBarberServices || !req.body.selectedBarber || !req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "customer") return res.status(400).send({success: false, message:"You do not have excess"});
+        
+        var bookingModel = new BookingModel();
+        bookingModel.shopAdminAccountId =  req.body.shopAdminAccountId
+        bookingModel.bookingTime =  req.body.bookingTime
+        bookingModel.bookingDate =  req.body.bookingDate
+        bookingModel.bookingBranch =  req.body.bookingBranch
+        bookingModel.selectedBarberServices =  req.body.selectedBarberServices
+        bookingModel.selectedBarber =  req.body.selectedBarber
+        bookingModel.isItWalkingCustomer =  false
+        bookingModel.customer =  req.user._id
+        bookingModel.totalDiscount =  req.body.totalDiscount
+        bookingModel.availablePromotionsDiscount =  req.body.availablePromotionsDiscount
+        // bookingModel.paymentStatus =  req.body.availablePromotionsDiscount
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
 };
