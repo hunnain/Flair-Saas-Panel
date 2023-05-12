@@ -100,6 +100,9 @@ const UserSchema = new Schema({
         type: Boolean,
         default: true
     },
+    customerAccountMustRequiredCardOnBooking:{
+        type: Array
+    },
     stripeCustomerId:{       //CustomerID is unique for each customer for subscription or normal payment for shop
         type: String
     },

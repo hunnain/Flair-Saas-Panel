@@ -99,6 +99,12 @@ const ShopCustomersSchema = new Schema({
     secretChangePasswordCodeExpires: {
         type: Date,
     },
+    stripeCustomerId:{       //CustomerID is unique for each customer for subscription or normal payment for shop
+        type: String
+    },
+    stripeSavedCardIds:{
+        type: Array
+    },
     created_at      : { type: Date, default: Date.now },
 })
 

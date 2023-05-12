@@ -4,9 +4,9 @@ var controller 	= require('../controllers/customerUserAuthSpecificController')
 
 // router.route('/')				.get(controller.index)
 router.route('/updateinfo')			.post(controller.updateCustomer)
-// router.route('/updatebusinessdetail')			.post(controller.updateInitialShopDetails)
-// router.route('/updatemobile')			.post(controller.updateMobileandSendOtpToAdminUser)
-// router.route('/resendmobileotp')			.post(controller.resendMobileOtpForAdminUser)
+router.route('/savecard')			.post(controller.saveCard)
+router.route('/checkoutcustomer')			.post(controller.checkoutCustomerPanel)
+router.route('/deletecard')			.post(controller.deleteCard)
 // router.route('/verifymobileotp')			.post(controller.verifyOtpForAdminUser)
 
 module.exports = router;

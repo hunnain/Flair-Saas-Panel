@@ -9,21 +9,30 @@ const BookingSchema = new Schema({
         required: true,
         ref: 'shopsadminaccount',
     },
+    bookingId:{
+        type: String,
+        required: true
+    },
     bookingImg:{
         type: String,  
         default:"https://cdn3.vectorstock.com/i/thumb-large/32/12/default-avatar-profile-icon-vector-39013212.jpg" 
     },
     bookingTime:{
-        startTime: String,
-        endTime: String,
-        required: true
+        startTime: {
+            type: String,
+            required: true
+        },
+        endTime: {
+            type: String,
+            required: true
+        }
     },
     bookingDate:{
         type: Date,
         required: true
     },
     bookingBranch: { type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches', required: true },
-    selectedBarberServices: [{ type : mongoose.Schema.Types.ObjectId, ref: 'barberschoosenservice', customPricingisON, customPrice, required: true }],
+    selectedBarberServices: [{ type : mongoose.Schema.Types.ObjectId, ref: 'barberschoosenservice', customPricingisON:Boolean, customPrice:Number, quanity: Number, required: true }],
     selectedBarber: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbarbers',required: true }],
     customer:{
         type : mongoose.Schema.Types.ObjectId, 

@@ -545,3 +545,49 @@ exports.getAllCategoriesOfShopList = async (req, res) => {
         });
     }
 };
+
+// Save New Barber Card   ----> Testing
+exports.saveCard = async (req, res) => {
+    try{
+        if (!req.body.cardToken) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+        
+        const user = await ShopBarbersModel.findOne({
+            _id: req.user._id,
+            shopAdminAccountId: req.user.shopAdminAccountId
+        });
+        if (!user) return res.status(400).send({success: false, message:"User Not Found. Please contact Flair Support"});
+
+        const customerId = req.user.stripeCustomerId;
+        const cardToken = req.body.cardToken;
+        const cardId = await saveCard(customerId, cardToken);
+
+
+        user.stripeSavedCardIds.push(cardId);
+
+        await user.save(async function (err, user) {
+            if (err) {
+                if (err.name === 'MongoError' && err.code === 11000) {
+                  // Duplicate username
+                  return res.status(400).send({ succes: false, message: 'User already exist!' });
+                }
+          
+                // Some other error
+                return res.status(400).send({success: false, message: "Something Went Wrong"});
+              }
+            
+
+            res.send({
+                data: user._id,
+                success: true,
+                message: "Updated!"
+            });
+        });  
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
