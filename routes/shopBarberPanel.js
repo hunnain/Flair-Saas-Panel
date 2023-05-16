@@ -9,6 +9,6 @@ router.route('/verifyotpformobilenumchange')			.post(controller.verifyOtpForMobi
 router.route('/addbarberservices')			.post(controller.addBarberServices)
 router.route('/getallservicewithcategories')	.post(controller.getAllCategoriesOfShopList)
 router.route('/updatebarberservice')	.post(controller.updateBarberService)
-// router.route('/getsingleuserprofiledetail')	.post(controller.getSingleUserProfileDetail)
+router.route('/addbarberworkinghour')	.post(controller.addBarberWorkingHour)
 
 module.exports = router;

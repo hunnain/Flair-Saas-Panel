@@ -12,6 +12,9 @@ const ShopCustomersSchema = new Schema({
     mobile: {
         type: String,
     },
+    referralCode: {
+        type: String,
+    },
     isMobileVerified:{
         type: Boolean,
         required: true,

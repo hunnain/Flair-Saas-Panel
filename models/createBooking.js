@@ -78,6 +78,9 @@ const BookingSchema = new Schema({
         type: String,
         enum: ['pending', 'inprogress', 'completed', 'cancelled'],
     },
+    barberAcceptedThisBooking:{
+        type: Boolean
+    },
     stripeCustomerId:{      
         type: String
     },

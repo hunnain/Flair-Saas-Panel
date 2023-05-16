@@ -2,12 +2,17 @@ const mongoose  = require('mongoose');
 const bcrypt    = require('bcrypt');
 const Schema    = mongoose.Schema;
 const crypto = require('crypto');
+const moment = require('moment-timezone');
 
 const ShopBarberSchema = new Schema({
     shopAdminAccountId:{
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'shopsadminaccount',
+    },
+    isBarberLive:{
+       type: Boolean,
+       default: false
     },
     mobile: {
         type: String,
@@ -49,6 +54,34 @@ const ShopBarberSchema = new Schema({
         trim: true
     },
     workingLocation: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
+    workingHours: [{
+        shopBranch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'shopbranches'
+        },
+        dayOfWeek: {
+          type: String,
+          enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        },
+        startTime: {
+          type: String,
+          validate: {
+            validator: function(v) {
+              return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+            },
+            message: props => `${props.value} is not a valid time format.`
+          }
+        },
+        endTime: {
+          type: String,
+          validate: {
+            validator: function(v) {
+              return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+            },
+            message: props => `${props.value} is not a valid time format.`
+          }
+        }
+      }],
     isOnCommission: {
         type: Boolean
     },

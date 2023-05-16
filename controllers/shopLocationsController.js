@@ -22,7 +22,7 @@ const db = getFirestore();
 exports.addShopLocations = async function (req, res) {
   try{
 
-  if (!req.body.locationName || !req.body.locationCountry || !req.body.locationCity || !req.body.locationStreet || !req.body.locationPostalCode || !req.body.lat || !req.body.long) return res.status(400).send({success: false, message:"Invalid Request"});
+  if (!req.body.locationName || !req.body.locationCountry || !req.body.locationCity || !req.body.locationStreet || !req.body.locationPostalCode || !req.body.lat || !req.body.long || !req.body.openingHours) return res.status(400).send({success: false, message:"Invalid Request"});
 
 //   Checking that invitation card should exist in the db then proceed further
   let user = await UserModel.findOne({_id: req.user._id})
@@ -50,6 +50,7 @@ exports.addShopLocations = async function (req, res) {
   shopBranchesModel.saturday = req.body.saturday
   shopBranchesModel.sunday = req.body.sunday
   shopBranchesModel.location = req.body.location
+  shopBranchesModel.openingHours = req.body.openingHours; // Assuming openingHours data is provided in the request body
   
 
   shopBranchesModel.save(async function (err, data) {

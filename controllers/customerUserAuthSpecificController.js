@@ -124,28 +124,58 @@ exports.saveCard = async (req, res) => {
 
         const customerId = req.user.stripeCustomerId;
         const cardToken = req.body.cardToken;
-        const cardId = await saveCard(customerId, cardToken);
 
+        // Verify Card is Correct
+        const currency = 'usd'; // replace with the currency you want to charge in
 
-        user.stripeSavedCardIds.push(cardId);
+        const params = {
+          amount: 0, // zero amount
+          currency: currency,
+          payment_method_types: ['card'],
+          payment_method: cardToken,
+          confirm: true,
+          setup_future_usage: 'off_session',
+        };
+        
+        stripe.paymentIntents.create(params, async function(err, paymentIntent) {
+          if (err) {
+              // Handle error
+            if (!user) return res.status(400).send({success: false, err, message:"Error cannot verify your card. Please contact Flair Support"});
+          } else {
+            if (paymentIntent.status === 'succeeded') {
+              // The card is valid
+              console.log('Card is valid');
+              // Do something here, e.g. save the payment method ID to the customer's account
 
-        await user.save(async function (err, user) {
-            if (err) {
-                if (err.name === 'MongoError' && err.code === 11000) {
-                  // Duplicate username
-                  return res.status(400).send({ succes: false, message: 'User already exist!' });
-                }
-          
-                // Some other error
-                return res.status(400).send({success: false, message: "Something Went Wrong"});
-              }
-            
+                // Save Card in stripe
+                const cardId = await saveCard(customerId, cardToken);
 
-            res.send({
-                data: user._id,
-                success: true,
-                message: "Updated!"
-            });
+                // saving CardId in DB
+                user.stripeSavedCardIds.push(cardId);
+
+                await user.save(async function (err, user) {
+                    if (err) {
+                        if (err.name === 'MongoError' && err.code === 11000) {
+                        // Duplicate username
+                        return res.status(400).send({ succes: false, message: 'User already exist!' });
+                        }
+                
+                        // Some other error
+                        return res.status(400).send({success: false, message: "Something Went Wrong"});
+                    }
+                    
+                    res.send({
+                        success: true,
+                        message: "Saved!"
+                    });
+                });
+
+            } else {
+              // The card is not valid
+              console.log('Card is not valid');
+              if (!user) return res.status(400).send({success: false, err, message:"Error cannot verify your card. Please try another card"});
+            }
+          }
         });  
         
     }catch (error) {

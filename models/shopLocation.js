@@ -38,35 +38,53 @@ const shopBranchesSchema = new Schema({
 			default: "Point"
 		},
 		address: { type: String, },
-		coordinates: [ Number ],
+		coordinates: {
+            type: [Number],
+            required: true,
+            validate: {
+              validator: (coords) => coords.length === 2 && coords.every((c) => !isNaN(c)),
+              message: 'Invalid coordinates',
+            },
+          }
 	},
-    monday:{
-        startAt:String,
-        endAt:String
-    },
-    tuesday:{
-        startAt:String,
-        endAt:String
-    },
-    wednesday:{
-        startAt:String,
-        endAt:String
-    },
-    thursday:{
-        startAt:String,
-        endAt:String
-    },
-    friday:{
-        startAt:String,
-        endAt:String
-    },
-    saturday:{
-        startAt:String,
-        endAt:String
-    },
-    sunday:{
-        startAt:String,
-        endAt:String
+    openingHours: {
+        type: [
+            {
+                dayOfWeek: {
+                    type: String,
+                    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                    required: true
+                },
+                startTime: {
+                    type: String,
+                    required: true,
+                    validate: {
+                        validator: function(v) {
+                            return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+                        },
+                        message: props => `${props.value} is not a valid time format.`
+                    },
+                },
+                endTime: {
+                    type: String,
+                    required: true,
+                    validate: {
+                        validator: function(v) {
+                            return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+                        },
+                        message: props => `${props.value} is not a valid time format.`
+                    },
+                },
+                closed: {
+                    type: Boolean,
+                    default: false
+                }
+            }
+        ],
+        validate: {
+            validator: (hours) => hours.length === 7,
+            message: 'Opening hours must be specified for all days of the week',
+        },
     },
     created_at:{ type: Date, default: Date.now },
 }, {versionKey: false}, {strict: false},)

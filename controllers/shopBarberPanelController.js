@@ -15,6 +15,7 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require('twilio')(accountSid, authToken);
 const mongoose  = require('mongoose');
 const moment = require('moment-timezone');
+const validateBarberWorkingHours = require('./shopBarberworkinTimeOnbranchValidation')
 
 // Auto Genrate String Numbers Function
 function makeid(length) {
@@ -218,27 +219,6 @@ exports.updateBarber = async function (req, res) {
     if(req.body.barberPhotosGallery){
         user.barberPhotosGallery.push(req.body.barberPhotosGallery)
     } 
-    if(req.body.monday){
-        user.monday = req.body.monday
-    }
-    if(req.body.tuesday){
-        user.tuesday = req.body.tuesday
-    }
-    if(req.body.wednesday){
-        user.wednesday = req.body.wednesday
-    }
-    if(req.body.thursday){
-        user.thursday = req.body.thursday
-    }
-    if(req.body.friday){
-        user.friday = req.body.friday
-    }
-    if(req.body.saturday){
-        user.saturday = req.body.saturday
-    }
-    if(req.body.sunday){
-        user.sunday = req.body.sunday
-    }
     if(req.body.appointmentRequest){
         user.appointmentRequest = req.body.appointmentRequest
     }
@@ -283,6 +263,81 @@ exports.updateBarber = async function (req, res) {
     }
 
 };
+
+// Add Barber Working Hour in each branch
+exports.addBarberWorkingHour = async function (req, res) {
+    try {
+      if (!req.body.shopAdminAccountId || !Array.isArray(req.body.addWorkingHour))
+        return res.status(400).send({ success: false, message: "Invalid Request" });
+      if (req.user.userType !== "barber")
+        return res.status(400).send({ success: false, message: "You do not have access" });
+  
+      const user = await ShopBarbersModel.findOne({
+        _id: req.user._id,
+        shopAdminAccountId: req.body.shopAdminAccountId,
+      });
+      if (!user)
+        return res
+          .status(400)
+          .send({ success: false, message: "Barber Not Found. Please contact Flair Support" });
+  
+      const validationPromises = req.body.addWorkingHour.map(async (workingHour) => {
+        const dayOfWeek = workingHour.dayOfWeek.toLowerCase();
+        const startTime = workingHour.startTime;
+        const endTime = workingHour.endTime;
+        const shopBranchId = workingHour.shopBranch;
+  
+        const validationOfTime = await validateBarberWorkingHours(
+          req.user._id,
+          shopBranchId,
+          dayOfWeek,
+          startTime,
+          endTime
+        );
+        // console.log("RESULT ============>", validationOfTime);
+        if(validationOfTime.success ===false)return res.status(400).send({ success: false, message: validationOfTime.message });
+  
+        // Create the working hours object
+        const workingHours = {
+          shopBranch: shopBranchId,
+          dayOfWeek: dayOfWeek,
+          startTime: startTime,
+          endTime: endTime,
+        };
+  
+        // Push the working hours object to the array
+        user.workingHours.push(workingHours);
+      });
+  
+      // Wait for all the validation promises to resolve
+      await Promise.all(validationPromises);
+  
+      // Save the user and send the response
+      await user.save(async function (err, user) {
+          if (err) {
+              if (err.name === 'MongoError' && err.code === 11000) {
+                // Duplicate username
+                return res.status(400).send({ succes: false, message: 'User already exist!' });
+              }
+      
+              // Some other error
+              return res.status(400).send({success: false, message: err});
+            }
+      
+          res.send({
+              data: user.workingHours,
+              success: true,
+              message: "Added!"
+          });
+      });
+    } catch (error) {
+      console.log("err", error);
+      res.status(500).send({
+        success: false,
+        message: "Server Internal Error",
+      });
+    }
+  };
 
 // Send OTP Barber phone Number in order to change mobile number
 exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
