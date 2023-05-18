@@ -1,9 +1,10 @@
 const moment = require('moment');
-const ShopBarber = require('../models/shopBarberSignup');
-const ShopBranch = require('../models/shopLocation');
+const ShopBarber = require('../../models/shopBarberSignup');
+const ShopBranch = require('../../models/shopLocation');
 
 // function to validate barber's working hours
 async function validateBarberWorkingHours(barberId, branchId, dayOfWeek, start, end) {
+  try{
     const barber = await ShopBarber.findById(barberId);
     if (!barber) {
       // throw new Error('Barber not found');
@@ -78,6 +79,10 @@ async function validateBarberWorkingHours(barberId, branchId, dayOfWeek, start, 
     return{
       success: true
     }
+  }catch (error) {
+    console.error('Error ', error);
+    throw new Error('Server Internal Error');
+  }
   }
   
   module.exports = validateBarberWorkingHours;

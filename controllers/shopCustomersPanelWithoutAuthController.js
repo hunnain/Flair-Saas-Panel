@@ -62,10 +62,8 @@ exports.signupCustomerOfShop = async function (req, res) {
     // Mobile Verification
     shopCustomersModel.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    shopCustomersModel.mobileVerifyTokenExpires = momentConversionForDb;
+    const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    shopCustomersModel.mobileVerifyTokenExpires = expiryTime;
     // const customer = await stripe.customers.create({
     //     email:req.body.email.toLowerCase(),
     //     name: req.body.userName,
@@ -118,10 +116,8 @@ exports.resendMobileOtpForCustomerOfShop = async (req, res) => {
             // Mobile Verification
     shopCustomersModel.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    shopCustomersModel.mobileVerifyTokenExpires = momentConversionForDb;
+    const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    shopCustomersModel.mobileVerifyTokenExpires = expiryTime;
 
         await shopCustomersModel.save(async function (err, userData) {
 
@@ -151,7 +147,9 @@ exports.verifyCustomerOfShopOtp = async (req, res) => {
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.mobileVerifyTokenExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         user.isMobileVerified = true
         await user.save(async function (err, userData) {
@@ -482,10 +480,8 @@ exports.forgotPasswordSendOTPForCustomers = async (req, res) => {
             // Mobile Verification
     shopCustomersModel.resetPasswordToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    shopCustomersModel.resetPasswordExpires = momentConversionForDb;
+    const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    shopCustomersModel.resetPasswordExpires = expiryTime;
 
         await shopCustomersModel.save(async function (err, userData) {
 
@@ -515,7 +511,9 @@ exports.verifyForgotPasswordOtp = async (req, res) => {
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-        if (user.resetPasswordExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.resetPasswordExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         let secretChangePasswordCode = Math.floor(100000 + Math.random() * 100000).toString()
         // secretChangePasswordCode.toString();
@@ -523,9 +521,7 @@ exports.verifyForgotPasswordOtp = async (req, res) => {
         const hash = await bcrypt.hash(secretChangePasswordCode, 5);
         user.secretChangePasswordCode   = hash
 
-        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 5 min later time from current time
-
-        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+        let momentConversionForDb = moment().add(5, 'minute');
         user.secretChangePasswordCodeExpires = momentConversionForDb;
         await user.save(async function (err, userData) {
 
@@ -561,7 +557,9 @@ exports.recoverPassword = async (req, res) => {
         );
         if (!secretCodeCompare) return res.status(400).send({success: false, message:"Your information is incorrect"})
 
-        if (user.secretChangePasswordCodeExpires < Date.now()) return res.status(400).send({success: false, message:"Session Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.secretChangePasswordCodeExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Session Expired"});
 
         const hash = await bcrypt.hash(req.body.password, 10);
         user.password   = hash
@@ -596,10 +594,8 @@ exports.forgotPasswordSendOTPForCustomersEMAIL = async (req, res) => {
             // Mobile Verification
     shopCustomersModel.resetPasswordToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    shopCustomersModel.resetPasswordExpires = momentConversionForDb;
+    const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    shopCustomersModel.resetPasswordExpires = expiryTime;
 
         await shopCustomersModel.save(async function (err, userData) {
 
@@ -629,7 +625,9 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-        if (user.resetPasswordExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.resetPasswordExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         let secretChangePasswordCode = Math.floor(100000 + Math.random() * 100000).toString()
         // secretChangePasswordCode.toString();
@@ -637,9 +635,7 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
         const hash = await bcrypt.hash(secretChangePasswordCode, 5);
         user.secretChangePasswordCode   = hash
 
-        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 5 min later time from current time
-
-        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+        let momentConversionForDb = moment().add(5, 'minute');
         user.secretChangePasswordCodeExpires = momentConversionForDb;
         await user.save(async function (err, userData) {
 

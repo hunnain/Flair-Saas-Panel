@@ -2,6 +2,7 @@ const UserModel = require('../models/shopAdminSignup');
 const ShopBranchesModel = require("../models/shopLocation");
 const ShopCustomersModel = require("../models/shopCustomersSingup");
 const BookingModel = require("../models/createBooking");
+const ShopBarbersModel = require("../models/shopBarberSignup");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -13,6 +14,8 @@ const client = require('twilio')(accountSid, authToken);
 const mongoose  = require('mongoose');
 const moment = require('moment-timezone');
 const crypto = require('crypto');
+const { isBarberAvailableAtTime } = require('./validations/availability');
+const { checkCustomerHasCard } = require('./validations/checkCustomerCardValidation');
 
 // Generate Unique ID
 async function generateUniqueString() {
@@ -240,10 +243,10 @@ exports.deleteCard = async (req, res) => {
 };
 
 
-//  CHECKOUT SECTION   --- Stripe Card charge & Loyalty
-exports.checkoutCustomerPanel = async (req, res) => {
+//  CHECKOUT SECTION   ---  Loyalty handling
+exports.createCustomerBooking = async (req, res) => {
     try{
-        if (!req.body.bookingTime || !req.body.bookingDate || !req.body.bookingBranch || !req.body.selectedBarberServices || !req.body.selectedBarber || !req.body.isReserverWithCard || !req.body.bookingStartTime || !req.body.bookingEndTime) return res.status(400).send({success: false, message:"Invalid Request"});
+        if (!req.body.bookingTime || !req.body.bookingDate || !req.body.bookingBranch || !req.body.selectedBarberServices || !req.body.selectedBarber || !req.body.isReserverWithCard === undefined || !req.body.bookingTime) return res.status(400).send({success: false, message:"Invalid Request"});
         if(req.user.userType !== "customer") return res.status(400).send({success: false, message:"You do not have excess"});
         
         const user = await UserModel.findOne({
@@ -251,75 +254,93 @@ exports.checkoutCustomerPanel = async (req, res) => {
         });
         if (!user) return res.status(400).send({success: false, message:"Sorry wrong info, You cannot create booking. Contact with Support"});
 
-        let uniqueString = generateUniqueString();
+        // Also getting barber data
+        const barber = await ShopBarbersModel.findOne({
+            shopAdminAccountId: req.user.shopAdminAccountId,
+            _id: req.body.selectedBarber
+        });
+        if (!barber) return res.status(400).send({success: false, message:"Sorry wrong info, You cannot create booking. Contact with Support"});
+        // checking that barber is live or not
+        if(barber.isBarberLive === false) return res.status(400).send({success: false, message:"Sorry this barber is inactive. Contact with Support"});
 
-        if(user.bookingPaymentWithCard === true){
-            // This Shop request to every customer to add card & pay via card
+        const shopBranch = await ShopBranchesModel.findOne({
+            shopAdminAccountId: req.user.shopAdminAccountId,
+            _id: req.body.bookingBranch
+        });
+        if (!shopBranch) return res.status(400).send({success: false, message:"Sorry wrong info, You cannot create booking. Contact with Support"});
 
-            var bookingModel = new BookingModel();
-            bookingModel.shopAdminAccountId =  req.user.shopAdminAccountId
-            bookingModel.bookingTime.startTime =  req.body.bookingStartTime
-            booking.bookingTime.endTime = req.body.bookingEndTime
-            bookingModel.bookingDate =  req.body.bookingDate
-            bookingModel.bookingBranch =  req.body.bookingBranch
-            bookingModel.selectedBarberServices =  req.body.selectedBarberServices
-            bookingModel.selectedBarber =  req.body.selectedBarber
-            bookingModel.isItWalkingCustomer =  false
-            bookingModel.customer =  req.user._id
-            bookingModel.totalDiscount =  req.body.totalDiscount
-            bookingModel.availablePromotionsDiscount =  req.body.availablePromotionsDiscount
-            // bookingModel.paymentStatus =  req.body.availablePromotionsDiscount
-            bookingModel.bookingId = uniqueString
+        // Check that booking time match with barber working hour Also check that it match with shop branch opened time
+        const bookingDate = moment.utc(req.body.bookingDate, "YYYY-MM-DD").toDate();
+        const isBarberAvailable = await isBarberAvailableAtTime(barber, shopBranch, req.body.bookingBranch, bookingDate ,req.body.bookingTime.startTime);
+        if (!isBarberAvailable) {
+        return res.status(400).send({ success: false, message: "Barber is not available at the specified time Or Branch is closed" });
         }
 
-        // Checking Each user in Admin that admin has enable any user to must add card or not
-        if (user.customerAccountMustRequiredCardOnBooking && user.customerAccountMustRequiredCardOnBooking.length > 0) {
-            // check if the array is not empty
-          
-            const loggedInUserId = req.user._id.toString(); // convert the ObjectId to a string
-          
-            if (user.customerAccountMustRequiredCardOnBooking.indexOf(loggedInUserId) !== -1) {
-              // check if the array contains the logged-in user's ObjectId
-          
-              // the logged-in user's ObjectId is in the array
-              // you can perform any actions you want here
-              console.log('The logged-in user is required to have a card on booking.');
-              var bookingModel = new BookingModel();
-              bookingModel.shopAdminAccountId =  req.user.shopAdminAccountId
-              bookingModel.bookingTime =  req.body.bookingTime
-              bookingModel.bookingDate =  req.body.bookingDate
-              bookingModel.bookingBranch =  req.body.bookingBranch
-              bookingModel.selectedBarberServices =  req.body.selectedBarberServices
-              bookingModel.selectedBarber =  req.body.selectedBarber
-              bookingModel.isItWalkingCustomer =  false
-              bookingModel.customer =  req.user._id
-              bookingModel.totalDiscount =  req.body.totalDiscount
-              bookingModel.availablePromotionsDiscount =  req.body.availablePromotionsDiscount
-            //   bookingModel.paymentStatus =  req.body.availablePromotionsDiscount
-            bookingModel.bookingId = uniqueString
-            }
+        let uniqueString = generateUniqueString();
+
+        var bookingModel = new BookingModel();
+        bookingModel.shopAdminAccountId =  req.user.shopAdminAccountId
+        bookingModel.bookingTime =  req.body.bookingTime
+        bookingModel.bookingDate =  moment.utc(req.body.bookingDate).toDate();
+        bookingModel.bookingBranch =  req.body.bookingBranch
+        bookingModel.selectedBarberServices =  req.body.selectedBarberServices
+        bookingModel.selectedBarber =  req.body.selectedBarber
+        bookingModel.isItWalkingCustomer =  false
+        bookingModel.customer =  req.user._id
+        bookingModel.totalDiscount =  req.body.totalDiscount
+        bookingModel.availablePromotionsDiscount =  req.body.availablePromotionsDiscount
+        // bookingModel.paymentStatus =  req.body.availablePromotionsDiscount
+        bookingModel.bookingId = uniqueString
+        bookingModel.isConfirmedByBarber =  true
+        bookingModel.confirmationDate =  moment.utc().toDate();
+        bookingModel.isThisBookingReservedWithCard =  false
+
+        // Checking barber has auto allow for booking request or it is manually done by barber
+        if(barber.appointmentRequest === true){
+            bookingModel.isConfirmedByBarber =  false
+            bookingModel.confirmationDate =  undefined;
+        }
+
+        if(user.bookingPaymentWithCard === true){
+            // This Shop request to every customer to add card & pay via card But if admin has selected any person to not add card so we can allow them here so we not check that it has saved any card
+            
+            if (!user.customerNotRequiredToAddCardByAdmin.includes(req.user._id)) {
+                // req.user._id is not found in customerNotRequiredToAddCardByAdmin array
+                const hasCard = await checkCustomerHasCard(req.user.stripeCustomerId);
+                if (typeof hasCard === 'string') {
+                console.log(`Error: ${hasCard}`);
+                return res.status(400).send({ success: false, message: hasCard });
+                }           
+                bookingModel.isThisBookingReservedWithCard =  true
+              }
+
+        }
+
+        // we check that is admin & barber both has required to add card for this specific customer only
+        const userRequiresCard = user.customerRequiredToAddCardByAdmin.concat(barber.customerRequiredToAddCardByBarber);
+        if (userRequiresCard.includes(req.user._id)) {
+            
+                const hasCard = await checkCustomerHasCard(req.user.stripeCustomerId);
+                if (typeof hasCard === 'string') {
+                  console.log(`Error: ${hasCard}`);
+                  return res.status(400).send({ success: false, message: hasCard });
+                }
+                bookingModel.isThisBookingReservedWithCard =  true
           }
 
         // Over here there is not required card from barber and admin, Now it depend on user if he wanna reserve with card or not
         if(isReserverWithCard === true){
-            
-        }else{
-            // Reserver Spot Wihtout Payment Card
+            // This Shop request to every customer to add card & pay via card
+            const hasCard = await checkCustomerHasCard(req.user.stripeCustomerId);
+            if (typeof hasCard === 'string') {
+            console.log(`Error: ${hasCard}`);
+            return res.status(400).send({ success: false, message: hasCard });
+            }
+            bookingModel.isThisBookingReservedWithCard =  true
+        }
 
-            var bookingModel = new BookingModel();
-            bookingModel.shopAdminAccountId =  req.user.shopAdminAccountId
-            bookingModel.bookingTime =  req.body.bookingTime
-            bookingModel.bookingDate =  req.body.bookingDate
-            bookingModel.bookingBranch =  req.body.bookingBranch
-            bookingModel.selectedBarberServices =  req.body.selectedBarberServices
-            bookingModel.selectedBarber =  req.body.selectedBarber
-            bookingModel.isItWalkingCustomer =  false
-            bookingModel.customer =  req.user._id
-            bookingModel.totalDiscount =  req.body.totalDiscount
-            bookingModel.availablePromotionsDiscount =  req.body.availablePromotionsDiscount
-            bookingModel.paymentStatus =  "pending"
-            bookingModel.bookingStatus =  "pending"
-            bookingModel.bookingId = uniqueString
+
+            // Reserver Spot Wihtout Card will by default run, If custome rrequired to add card so above condition will do that to check that this customer has any saved card 
 
             await bookingModel.save(async function (err, user) {
                 if (err) {
@@ -334,12 +355,51 @@ exports.checkoutCustomerPanel = async (req, res) => {
             
 
                 res.send({
-                    data: user._id,
+                    data: user,
                     success: true,
-                    message: "Updated!"
+                    message: "Booking Created!"
                 });
             }); 
-            }
+            
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Customer Save card details
+exports.customerAllSavedCards = async (req, res) => {
+    try{
+        if(req.user.userType !== "customer") return res.status(400).send({success: false, message:"You do not have excess"});
+        
+        const user = await ShopCustomersModel.findOne({
+            _id: req.user._id,
+            shopAdminAccountId: req.user.shopAdminAccountId
+        });
+        if (!user) return res.status(400).send({success: false, message:"User Not Found. Please contact Flair Support"});
+
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: user.stripeCustomerId,
+            type: 'card',
+          });
+      
+          const formattedCards = paymentMethods.data.map((paymentMethod) => {
+            return {
+              lastFourDigits: paymentMethod.card.last4,
+              brand: paymentMethod.card.brand,
+              expMonth: paymentMethod.card.exp_month,
+              expYear: paymentMethod.card.exp_year,
+            };
+          });
+
+          res.send({
+            data: formattedCards,
+            success: true,
+            message: "Customer Details"
+        });
         
     }catch (error) {
         console.log("err",error)

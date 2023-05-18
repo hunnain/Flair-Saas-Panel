@@ -54,6 +54,7 @@ const ShopBarberSchema = new Schema({
         trim: true
     },
     workingLocation: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
+    customerRequiredToAddCardByBarber: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopcustomers' }],
     workingHours: [{
         shopBranch: {
           type: mongoose.Schema.Types.ObjectId,
@@ -165,34 +166,6 @@ const ShopBarberSchema = new Schema({
     },
     secretChangePasswordCodeExpires: {
         type: Date,
-    },
-    monday:{
-        startAt:String,
-        endAt:String
-    },
-    tuesday:{
-        startAt:String,
-        endAt:String
-    },
-    wednesday:{
-        startAt:String,
-        endAt:String
-    },
-    thursday:{
-        startAt:String,
-        endAt:String
-    },
-    friday:{
-        startAt:String,
-        endAt:String
-    },
-    saturday:{
-        startAt:String,
-        endAt:String
-    },
-    sunday:{
-        startAt:String,
-        endAt:String
     },
     appointmentRequest:{
         type: Boolean,

@@ -15,7 +15,7 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require('twilio')(accountSid, authToken);
 const mongoose  = require('mongoose');
 const moment = require('moment-timezone');
-const validateBarberWorkingHours = require('./shopBarberworkinTimeOnbranchValidation')
+const validateBarberWorkingHours = require('./validations/shopBarberworkinTimeOnbranchValidation')
 
 // Auto Genrate String Numbers Function
 function makeid(length) {
@@ -352,10 +352,8 @@ exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
             // Mobile Verification
         user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-        user.mobileVerifyTokenExpires = momentConversionForDb;
+        const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+        user.mobileVerifyTokenExpires = expiryTime;
 
         await user.save(async function (err, user) {
             if (err) {
@@ -395,24 +393,9 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
         if(!user)  return res.status(400).send({success: false, message:"Otp Incorrect"});
 
         // if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
-                // if (user.mobileVerifyTokenExpires > Date.now()){
-                //       console.log("if kai andr wala chl raha hai")
-                // }else{
-                //       console.log("if kai bahar wala chl raha hai")
-                // }
-                function checkExpiry(otpExpTime) {
-                    const now = new Date();
-                    
-                    if (now > otpExpTime) {
-                      console.log("OTP code has expired");
-                    } else {
-                      console.log("OTP code is valid");
-                    }
-                  }
-                  
-                  const otpExpTime = new Date();
-                  otpExpTime.setMinutes(otpExpTime.getMinutes() + 1);
-                  checkExpiry(otpExpTime);
+                const currentTime = moment();
+                const isExpired = currentTime.isAfter(user.mobileVerifyTokenExpires);
+                if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         res.send({
             success: true,

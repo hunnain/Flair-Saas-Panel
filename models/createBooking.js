@@ -20,11 +20,23 @@ const BookingSchema = new Schema({
     bookingTime:{
         startTime: {
             type: String,
-            required: true
+                    required: true,
+                    validate: {
+                        validator: function(v) {
+                            return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+                        },
+                        message: props => `${props.value} is not a valid time format.`
+            },
         },
         endTime: {
             type: String,
-            required: true
+                    required: true,
+                    validate: {
+                        validator: function(v) {
+                            return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+                        },
+                        message: props => `${props.value} is not a valid time format.`
+            },
         }
     },
     bookingDate:{
@@ -32,7 +44,26 @@ const BookingSchema = new Schema({
         required: true
     },
     bookingBranch: { type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches', required: true },
-    selectedBarberServices: [{ type : mongoose.Schema.Types.ObjectId, ref: 'barberschoosenservice', customPricingisON:Boolean, customPrice:Number, quanity: Number, required: true }],
+    selectedBarberServices: [{
+        service: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'barberschoosenservice',
+          required: true
+        },
+        customPricing: {
+          isOn: {
+            type: Boolean,
+            default: false
+          },
+          price: {
+            type: Number
+          }
+        },
+        quantity: {
+          type: Number,
+          default: 1
+        }
+      }],
     selectedBarber: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbarbers',required: true }],
     customer:{
         type : mongoose.Schema.Types.ObjectId, 
@@ -66,10 +97,38 @@ const BookingSchema = new Schema({
     totalPrice:{
         type: Number,
     },
+    tipPaid: {
+        type: Boolean,
+        default: false
+    },
+    tipAmount: {
+        type: Number
+    },
+    isConfirmedByBarber: {
+        type: Boolean,
+        default: false
+      },
+      confirmationDate: {
+        type: Date
+      },
+      calendarEventId: {
+        type: String
+      },
+      voucherCode: {
+        type: String
+      },
+    isExpressBooking: {
+       type: Boolean,
+       default: false
+    },
     paymentMethodType:{
         type: String,
         enum: ['stripe', 'cash', 'pos', 'points'],
     },
+    isThisBookingReservedWithCard: {
+        type: Boolean,
+        required: true
+     },
     paymentStatus:{
         type: String,
         enum: ['pending', 'completed', 'cancelled'],
@@ -87,6 +146,9 @@ const BookingSchema = new Schema({
     stripePaymentId:{      
         type: String
     },
+    completedDate: {
+        type: Date
+      },
     created_at      : { type: Date, default: Date.now },
 })
 

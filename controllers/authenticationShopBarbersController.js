@@ -30,6 +30,7 @@ exports.loginForShopBarbers = async (req, res) => {
             _id     : user._id,
             shopAdminAccountId   : user.shopAdminAccountId,
             email: req.body.email,
+            stripeCustomerId: user.stripeCustomerId,
             userType: "barber"
         });
         
@@ -69,10 +70,10 @@ exports.forgotPasswordSendOTPForBarberEMAIL = async (req, res) => {
             // Mobile Verification
             shopBarbersModel.resetPasswordToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
+    // let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
 
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    shopBarbersModel.resetPasswordExpires = momentConversionForDb;
+    const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    shopBarbersModel.resetPasswordExpires = expiryTime;
 
         await shopBarbersModel.save(async function (err, userData) {
 
@@ -102,8 +103,11 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
         })
         if (!user) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-        const expirationDate = moment(user.resetPasswordExpires);
-        if (expirationDate.isBefore(moment())) return res.status(400).send({success: false, message:"Otp Expired"});
+        // const expirationDate = moment(user.resetPasswordExpires);
+        // if (expirationDate.isBefore(moment())) return res.status(400).send({success: false, message:"Otp Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.resetPasswordExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         let secretChangePasswordCode = Math.floor(100000 + Math.random() * 100000).toString()
         // secretChangePasswordCode.toString();
@@ -111,9 +115,7 @@ exports.verifyForgotPasswordOtpEMAIL = async (req, res) => {
         const hash = await bcrypt.hash(secretChangePasswordCode, 5);
         user.secretChangePasswordCode   = hash
 
-        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 5 min later time from current time
-
-        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
+        let momentConversionForDb = moment().add(5, 'minute');
         user.secretChangePasswordCodeExpires = momentConversionForDb;
         await user.save(async function (err, userData) {
 
@@ -148,7 +150,10 @@ exports.recoverPassword = async (req, res) => {
         );
         if (!secretCodeCompare) return res.status(400).send({success: false, message:"Your information is incorrect"})
 
-        if (user.secretChangePasswordCodeExpires < Date.now()) return res.status(400).send({success: false, message:"Session Expired"});
+        // if (user.secretChangePasswordCodeExpires < Date.now()) return res.status(400).send({success: false, message:"Session Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.secretChangePasswordCodeExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Session Expired"});
 
         const hash = await bcrypt.hash(req.body.password, 10);
         user.password   = hash

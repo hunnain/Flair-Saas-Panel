@@ -96,6 +96,8 @@ const UserSchema = new Schema({
     businessAllSubAdmin: [{ type : mongoose.Schema.Types.ObjectId, ref: 'subadminaccounts' }],
     businessAllCustomers: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopcustomers' }],
     businessAllBarbers: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbarbers' }],
+    customerRequiredToAddCardByAdmin: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopcustomers' }],
+    customerNotRequiredToAddCardByAdmin: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopcustomers' }],
     bookingPaymentWithCard:{
         type: Boolean,
         default: true

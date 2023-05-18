@@ -198,11 +198,9 @@ exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
 
             // Mobile Verification
             subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
-                
-            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
 
-            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+            const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+            subUser.mobileVerifyTokenExpires = expiryTime;
 
             await subUser.save(async function (err, subUser) {
                 if (err) {
@@ -229,10 +227,8 @@ exports.sendOTPOnNumberForMobileNumberChange = async function (req, res) {
             // Mobile Verification
         user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-        let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-        let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-        user.mobileVerifyTokenExpires = momentConversionForDb;
+        const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+        user.mobileVerifyTokenExpires = expiryTime;
 
         await user.save(async function (err, user) {
             if (err) {
@@ -277,7 +273,9 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
             })
             if (!subUser) return res.status(400).send({success: false, message:"User Not Found"});   //Subadmin Also not Found here
              
-            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+            const currentTime = moment();
+            const isExpired = currentTime.isAfter(subUser.mobileVerifyTokenExpires);
+            if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
             res.send({
                 success: true,
@@ -288,7 +286,9 @@ exports.verifyOtpForMobileNumberChange = async function (req, res) {
 
         if(user){
 
-        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.mobileVerifyTokenExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         res.send({
             success: true,
@@ -582,10 +582,8 @@ exports.updateMobileandSendOtpToAdminUser = async (req, res) => {
             // Mobile Verification
             subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
                 
-            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+            const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+            subUser.mobileVerifyTokenExpires = expiryTime;
 
             subUser.mobile = req.body.mobile
                 await subUser.save(async function (err, userData) {
@@ -603,10 +601,8 @@ exports.updateMobileandSendOtpToAdminUser = async (req, res) => {
             // Mobile Verification
             user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    user.mobileVerifyTokenExpires = momentConversionForDb;
+            const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+            user.mobileVerifyTokenExpires = expiryTime;
 
     user.mobile = req.body.mobile
         await user.save(async function (err, userData) {
@@ -649,10 +645,8 @@ exports.resendMobileOtpForAdminUser = async (req, res) => {
             // Mobile Verification
             subUser.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-            let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-            let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-            subUser.mobileVerifyTokenExpires = momentConversionForDb;
+            const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+            subUser.mobileVerifyTokenExpires = expiryTime;
 
         await subUser.save(async function (err, userData) {
 
@@ -669,10 +663,8 @@ exports.resendMobileOtpForAdminUser = async (req, res) => {
             // Mobile Verification
             user.mobileVerifyToken = Math.floor(1000 + Math.random() * 9000);
     
-    let futuretimeForExpiry = Date.now() + 1000 * 60;  // Add 1 min later time from current time
-
-    let momentConversionForDb = moment(futuretimeForExpiry).format('YYYY.MM.DD HH:mm')
-    user.mobileVerifyTokenExpires = momentConversionForDb;
+            const expiryTime = moment().add(1, 'minute'); // Set expiry time 1 minute from now
+    user.mobileVerifyTokenExpires = expiryTime;
 
         await user.save(async function (err, userData) {
 
@@ -713,7 +705,9 @@ exports.verifyOtpForAdminUser = async (req, res) => {
             })
             if (!subUser) return res.status(400).send({success: false, message:"OTP Incorrect"});
 
-            if (subUser.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+            const currentTime = moment();
+            const isExpired = currentTime.isAfter(subUser.mobileVerifyTokenExpires);
+            if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
             subUser.isMobileVerified = true
             await subUser.save(async function (err, userData) {
@@ -726,7 +720,10 @@ exports.verifyOtpForAdminUser = async (req, res) => {
         }
 
         if(user){
-        if (user.mobileVerifyTokenExpires < Date.now()) return res.status(400).send({success: false, message:"Otp Expired"});
+
+        const currentTime = moment();
+        const isExpired = currentTime.isAfter(user.mobileVerifyTokenExpires);
+        if (isExpired) return res.status(400).send({success: false, message:"Otp Expired"});
 
         user.isMobileVerified = true
         await user.save(async function (err, userData) {
