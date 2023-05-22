@@ -67,7 +67,7 @@ const BookingSchema = new Schema({
     selectedBarber: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbarbers',required: true }],
     customer:{
         type : mongoose.Schema.Types.ObjectId, 
-        ref: 'shopbranches',
+        ref: 'shopcustomers',
         required: function() {
             return this.isItWalkingCustomer !== true;
         }
@@ -131,14 +131,11 @@ const BookingSchema = new Schema({
      },
     paymentStatus:{
         type: String,
-        enum: ['pending', 'completed', 'cancelled'],
+        enum: ['pending', 'completed', 'cancelled', 'failed'],
     },
     bookingStatus:{
         type: String,
-        enum: ['pending', 'inprogress', 'completed', 'cancelled'],
-    },
-    barberAcceptedThisBooking:{
-        type: Boolean
+        enum: ['pending', 'reserved' ,'inprogress', 'completed', 'cancelled'],
     },
     stripeCustomerId:{      
         type: String

@@ -52,7 +52,7 @@ const shopBranchesSchema = new Schema({
             {
                 dayOfWeek: {
                     type: String,
-                    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                    enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
                     required: true
                 },
                 startTime: {
