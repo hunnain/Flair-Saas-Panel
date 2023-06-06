@@ -4,6 +4,8 @@ const ShopCustomersModel = require("../models/shopCustomersSingup");
 const ShopBarbersModel = require("../models/shopBarberSignup");
 const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
 const ShopServicesModel = require('../models/shopServices');
+const BookingModel = require("../models/createBooking");
+const { isBarberAvailableAtTime, checkExistingBooking } = require('./validations/availability');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -662,6 +664,7 @@ exports.getAllBarberOfShop = async (req, res) => {
 
         const user = await ShopBarbersModel.find({
             shopAdminAccountId: req.body.shopAdminAccountId,
+            isBarberLive: true
         }).skip(parseFloat(pagesSkip))
         .limit(maxDocument)
         if (!user.length) return res.status(400).send({success: false, message:"Barber's not found of this shop"});
@@ -689,7 +692,8 @@ exports.searchBarberOfShop = async (req, res) => {
 
         const user = await ShopBarbersModel.find({
             firstName: { $regex: new RegExp("^" + req.body.search, "i") },
-            shopAdminAccountId: req.body.shopAdminAccountId
+            shopAdminAccountId: req.body.shopAdminAccountId,
+            isBarberLive: true
         }).skip(parseFloat(pagesSkip))
         .limit(maxDocument)
         if (!user.length) return res.status(400).send({success: false, message:"Barber's not found"});
@@ -758,4 +762,92 @@ exports.searchServiceOfShop = async (req, res) => {
             success: false,error, message:"Server Internal Error"
         });
     }
+};
+
+// Check Single Barber is available on given time
+exports.barberIsAvailable = async (req, res) => {
+    try{
+        if (!req.body.shopAdminAccountId || !req.body.barberId || !req.body.bookingDate || !req.body.bookingTime) return res.status(400).send({success: false, message:"Invalid Request"});
+        
+        const bookingModel = {
+            bookingDate: req.body.bookingDate,
+            bookingTime: req.body.bookingTime,
+            selectedBarber: req.body.barberId
+        }
+
+        // Check that if this barber has already exisitng booking at the same time and same date so give error
+        const bookingValidationResult = await checkExistingBooking(bookingModel);
+        console.log('sssss', bookingValidationResult)
+        if (!bookingValidationResult.success) {
+        return res.status(400).send({ success: false, message: "This time slot is already booked with the same barber in a different branch" });
+        }
+
+            res.send({
+                success: true,
+                message: "Time Slot Available"
+            });
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Single Barber Avialble Time slot of single day.
+exports.barberAvailableTimeSlot = async (req, res) => {
+try {
+    if (!req.body.shopAdminAccountId || !req.body.barberId || !req.body.branchId || !req.body.bookingDate) return res.status(400).send({success: false, message:"Invalid Request"});
+    const { barberId, branchId, bookingDate,  shopAdminAccountId} = req.body;
+    
+    // Fetch the barber's working hours for the specified branch
+    const barber = await ShopBarbersModel.findOne({
+      _id: barberId,
+      shopAdminAccountId: shopAdminAccountId,
+      'workingHours.shopBranch': branchId
+    });
+    
+    if (!barber) {
+      return res.status(400).json({ success: false, message: 'Barber not found' });
+    }
+    
+    // Extract the working hours for the specified date
+    const workingHours = barber.workingHours.find(wh => wh.dayOfWeek === moment(bookingDate).format('dddd').toLowerCase());
+    
+    if (!workingHours) {
+      return res.status(400).json({ success: false, message: `${barber.firstName} does not work on the specified date` });
+    }
+    
+    const startTime = moment(workingHours.startTime, 'HH:mm');
+    const endTime = moment(workingHours.endTime, 'HH:mm');
+    
+    // Fetch existing bookings for the specified barber and date
+    const existingBookings = await BookingModel.find({
+      selectedBarber: barberId,
+      bookingBranch: branchId,
+      bookingDate: new Date(bookingDate)
+    });
+    
+    // Generate available time slots
+    const timeSlots = [];
+    let currentTime = startTime.clone();
+    
+    while (currentTime.isBefore(endTime)) {
+      const bookingExists = existingBookings.some(booking =>
+        moment(booking.bookingTime.startTime, 'HH:mm').isBefore(currentTime.clone().add(15, 'minutes')) &&
+        moment(booking.bookingTime.endTime, 'HH:mm').isAfter(currentTime)
+      );
+      
+      if (!bookingExists) {
+        timeSlots.push(currentTime.format('HH:mm'));
+      }
+      
+      currentTime.add(15, 'minutes');
+    }
+    
+    res.json({ barberId, data: timeSlots, success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false ,message: 'Internal server error' });
+  }
 };

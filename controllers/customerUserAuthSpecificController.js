@@ -460,7 +460,7 @@ exports.customerSingleBookingDetail = async (req, res) => {
             _id: req.body.bookingId,
             customer: req.user._id,
             shopAdminAccountId: req.user.shopAdminAccountId
-        });
+        }).populate("customer");
         if (!booking) return res.status(400).send({success: false, message:"Booking Not Found. Please contact Flair Support"});
 
 
@@ -482,6 +482,7 @@ exports.customerSingleBookingDetail = async (req, res) => {
 exports.getUpcomingBookingsForCustomer = async (req, res) => {
     try {
         if (!req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "customer") return res.status(400).send({success: false, message:"You do not have excess"});
         
         const pageSize = 10; // Set the number of bookings per page
         const page = req.body.page || 1; // Get the current page from the query parameter
@@ -498,7 +499,7 @@ exports.getUpcomingBookingsForCustomer = async (req, res) => {
         ],
         bookingStatus: { $in: ['pending', 'reserved'] },
         }).sort({ 'bookingTime.startTime': 1 }).skip((page - 1) * pageSize)
-        .limit(pageSize);
+        .limit(pageSize).populate("customer")
 
       if (!upcomingBookings.length) return res.status(400).send({success: false, message:"There is no upcoming bookings"});
 
@@ -518,6 +519,7 @@ exports.getUpcomingBookingsForCustomer = async (req, res) => {
   exports.getPastBookingsForCustomer = async (req, res) => {
     try {
         if (!req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "customer") return res.status(400).send({success: false, message:"You do not have excess"});
         
         const pageSize = 10; // Set the number of bookings per page
         const page = req.body.page || 1; // Get the current page from the query parameter
@@ -534,9 +536,9 @@ exports.getUpcomingBookingsForCustomer = async (req, res) => {
         customer: req.user._id,
         bookingDate: { $lte: currentDate },
         bookingStatus: { $in: ['completed', 'cancelled'] }
-      })
+      }).populate("customer")
         .sort({ bookingDate: -1, 'bookingTime.startTime': -1 }).skip((page - 1) * pageSize)
-        .limit(pageSize); // Sort by booking date and start time in descending order
+        .limit(pageSize) // Sort by booking date and start time in descending order
 
         if (!pastBookings.length) return res.status(400).send({success: false, message:"There is no past bookings"});
   

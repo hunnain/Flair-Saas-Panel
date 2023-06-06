@@ -71,7 +71,7 @@ const isBarberAvailableAtTime = async (selectedBarber, selectedShopBranch, shopL
 // Check Existing Booking of Barber
 const checkExistingBooking = async (bookingModel) => {
   try {
-    const existingBooking = await BookingModel.findOne({
+    const existingBooking = await BookingModel.findOne({     
       bookingDate: bookingModel.bookingDate,
       'bookingTime.startTime': bookingModel.bookingTime.startTime,
       'bookingTime.endTime': bookingModel.bookingTime.endTime,

@@ -108,6 +108,9 @@ const BookingSchema = new Schema({
         type: Boolean,
         default: false
       },
+      isPermanentalyDeclinedByBarber:{
+        type: Boolean,
+      },
       confirmationDate: {
         type: Date
       },
@@ -132,6 +135,9 @@ const BookingSchema = new Schema({
     paymentStatus:{
         type: String,
         enum: ['pending', 'completed', 'cancelled', 'failed'],
+    },
+    checkoutData:{
+        type: Date
     },
     bookingStatus:{
         type: String,

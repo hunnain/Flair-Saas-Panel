@@ -5,6 +5,8 @@ const ShopBarbersModel = require("../models/shopBarberSignup");
 const BarberChoosenServicesModel = require("../models/BarberChoosenServices");
 const ShopServicesModel = require("../models/shopServices");
 const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
+const BookingModel = require("../models/createBooking");
+const BlockTime = require("../models/barberBlockTime");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -628,4 +630,648 @@ exports.saveCard = async (req, res) => {
             success: false,error, message:"Server Internal Error"
         });
     }
+};
+
+
+// Barber Client Request List
+exports.barberClientRequest = async (req, res) => {
+    try {
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+      const barberId = req.user._id; // Get barberId from frontend request
+  
+      // Get current date and time
+      const currentDateTime = new Date();
+  
+      const bookings = await BookingModel.find({
+        'selectedBarber': barberId,
+        'isConfirmedByBarber': false,
+        $or: [
+          { 'bookingDate': { $gt: currentDateTime } }, // Filter for future bookings
+          {
+            'bookingDate': { $eq: currentDateTime }, // Include bookings with the same date as current date
+            'bookingTime.startTime': { $gte: currentDateTime.getHours() + ':' + currentDateTime.getMinutes() } // Include bookings with start time greater than or equal to current time
+          }
+        ]
+      })
+        .sort({ 'bookingDate': 1, 'bookingTime.startTime': 1 }) // Sort by bookingDate and bookingTime.startTime in ascending order
+        .populate('customer') // Populate the customer field
+        .exec();
+        if (!bookings.length) return res.status(400).send({success: false, message:"There is no client request"});
+  
+        res.send({
+            data: bookings,
+            success: true,
+            message: "Client requests of barber!"
+        });
+    } catch (error) {
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+  }
+
+// Approve Or decline Client Request of barber
+exports.barberClientRequestApproveOrDecline = async (req, res) => {
+    try {
+        if (!req.body.bookingId || !req.body.action) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+
+      const bookingId = req.body.bookingId;
+      const action = req.body.action; // 'approve' or 'decline'
+  
+      let updateFields = {};
+  
+      if (action === 'approve') {
+        updateFields = {
+          isConfirmedByBarber: true,
+          confirmationDate: new Date(),
+          bookingStatus: 'reserved'
+        };
+      } else if (action === 'decline') {
+        updateFields = {
+          isConfirmedByBarber: false,
+          bookingStatus: 'cancelled',
+          isPermanentalyDeclinedByBarber: true
+        };
+      } else {
+        return res.status(400).send({success: false, message:"Invalid Data"});
+      }
+  
+      const updatedBooking = await BookingModel.findByIdAndUpdate(
+        bookingId,
+        updateFields,
+        { new: true }
+      );
+  
+      if (!updatedBooking) {
+        return res.status(400).send({success: false, message:"Booking Not Found"});
+      }
+  
+      res.status(200).json(updatedBooking);
+      res.send({
+        data: updatedBooking,
+        success: true,
+        message: "Updated"
+    });
+    } catch (error) {
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+}
+
+// Get Barber Upcoming Booking
+exports.getUpcomingBookingsForBarber = async (req, res) => {
+    try {
+      if (!req.body.page) return res.status(400).send({ success: false, message: "Invalid Request" });
+      if (req.user.userType !== "barber") return res.status(400).send({ success: false, message: "You do not have access" });
+  
+      const pageSize = 10; // Set the number of bookings per page
+      const page = req.body.page || 1; // Get the current page from the query parameter
+  
+      const currentDate = moment().toDate();
+      const upcomingBookings = await BookingModel.find({
+        selectedBarber: req.user._id, // Update the condition to match the selectedBarber field
+        isConfirmedByBarber: true,
+        $or: [
+          { bookingDate: { $gt: currentDate } },
+          {
+            bookingDate: currentDate,
+            'bookingTime.startTime': { $gte: moment().format('HH:mm') },
+          },
+        ],
+        bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
+      }).populate("customer")
+        .sort({ 'bookingTime.startTime': 1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize);
+  
+      if (!upcomingBookings.length) return res.status(400).send({ success: false, message: "There are no upcoming bookings" });
+  
+      res.send({
+        data: upcomingBookings,
+        success: true,
+        message: "Upcoming Bookings"
+      });
+    } catch (error) {
+      res.status(500).send({
+        success: false,
+        error,
+        message: "Server Internal Error"
+      });
+    }
+  };
+
+//   Get Past Booking For Barber
+  exports.getPastBookingsForBarber = async (req, res) => {
+    try {
+        if (!req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+        
+        const pageSize = 10; // Set the number of bookings per page
+        const page = req.body.page || 1; // Get the current page from the query parameter
+
+      const currentDate = moment().toDate();
+
+      const totalBookings = await BookingModel.countDocuments({
+        selectedBarber: req.user._id,
+        bookingDate: { $lt: currentDate },
+        bookingStatus: { $in: ['completed', 'cancelled'] },
+      });
+  
+      const pastBookings = await BookingModel.find({
+        selectedBarber: req.user._id,
+        bookingDate: { $lte: currentDate },
+        bookingStatus: { $in: ['completed', 'cancelled'] }
+      }).populate("customer")
+        .sort({ bookingDate: -1, 'bookingTime.startTime': -1 }).skip((page - 1) * pageSize)
+        .limit(pageSize); // Sort by booking date and start time in descending order
+
+        if (!pastBookings.length) return res.status(400).send({success: false, message:"There is no past bookings"});
+  
+      res.send({
+        data: pastBookings,
+        currentPage: page,
+        totalPages: Math.ceil(totalBookings / pageSize),
+        success: true,
+        message: 'Past Bookings'
+      });
+    } catch (error) {
+      res.status(500).send({
+        success: false,
+        error,
+        message: 'Server Internal Error'
+      });
+    }
+  };
+
+// Get Single Booking Details
+exports.getSingleBookingDetail = async (req, res) => {
+    try{
+        if (!req.body.bookingId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+       
+        const bookingModel = await BookingModel.findOne({
+            shopAdminAccountId: req.user.shopAdminAccountId,
+            _id: req.body.bookingId,
+            selectedBarber: req.user._id
+        }).populate("customer")
+        if (!bookingModel) return res.status(400).send({success: false, message:"Sorry booking not found"}); 
+        
+
+            res.send({
+                data: bookingModel,
+                success: true,
+                message: "Booking Detail!"
+            });
+    }catch (error) {
+        console.log('err',error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Image URL Save
+exports.saveBarberPhotoGallery = async (req, res) => {
+    try {
+        if (!req.body.barberId || !req.body.imageUrl) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+      // Get the barber ID from the request body
+      const { barberId } = req.body;
+  
+      // Get the image URL from the request body
+      const { imageUrl } = req.body;
+  
+      // Find the barber by ID in the database
+      const barber = await ShopBarbersModel.findById({ _id: barberId});
+  
+      // If the barber is not found, return an error response
+      if (!barber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Barber not found',
+        });
+      }
+  
+      // Create a new image object with the provided URL
+      const imageObject = {
+        _id: new mongoose.Types.ObjectId(),
+        imageUrl: imageUrl,
+      };
+  
+      // Add the image object to the barber's photo gallery
+      barber.barberPhotosGallery.push(imageObject);
+  
+      // Save the updated barber data in the database
+      await barber.save(async function (err, user) {
+        if (err) {
+            if (err.name === 'MongoError' && err.code === 11000) {
+              // Duplicate username
+              return res.status(400).send({ succes: false, message: 'User already exist!' });
+            }
+      
+            // Some other error
+            return res.status(400).send({success: false, message: "Something Went Wrong"});
+          }   
+          
+          // Return a success response
+          return res.status(200).json({
+            data: barber,
+            success: true,
+            message: 'Image uploaded successfully',
+          });
+    });  
+  
+    } catch (error) {
+      // Return an error response if any error occurs
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Image upload failed',
+      });
+    }
+}  
+
+// Delete Single Specific Image URL
+exports.deleteBarberSinglePhotoUrl = async (req, res) => {
+    try {
+        if (!req.body.barberId || !req.body.imageId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+      // Get the barber ID and image ID from the request body
+      const { barberId, imageId } = req.body;
+  
+      // Find the barber by ID in the database
+      const barber = await ShopBarbersModel.findById({_id: barberId});
+  
+      // If the barber is not found, return an error response
+      if (!barber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Barber not found',
+        });
+      }
+  
+      // Find the index of the image with the provided ID in the barber's photo gallery
+      const imageIndex = barber.barberPhotosGallery.findIndex(
+        (image) => image._id.toString() === imageId
+      );
+  
+      // If the image is not found, return an error response
+      if (imageIndex === -1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Image not found',
+        });
+      }
+  
+      // Remove the image from the barber's photo gallery array
+      barber.barberPhotosGallery.splice(imageIndex, 1);
+  
+      // Save the updated barber data in the database
+      await barber.save(async function (err, user) {
+        if (err) {
+            if (err.name === 'MongoError' && err.code === 11000) {
+              // Duplicate username
+              return res.status(400).send({ succes: false, message: 'User already exist!' });
+            }
+      
+            // Some other error
+            return res.status(400).send({success: false, message: "Something Went Wrong"});
+          }   
+          
+          // Return a success response
+          return res.status(200).json({
+            data: barber,
+            success: true,
+            message: 'Image deleted successfully',
+          });
+    }); 
+
+    } catch (error) {
+      // Return an error response if any error occurs
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Failed to delete image',
+      });
+    }
+}
+
+// Add Barber Block Time
+exports.addBarberBlockTime = async (req, res) => {
+  try {
+    if (!req.body.startTime || !req.body.endTime || !req.body.description) return res.status(400).send({success: false, message:"Invalid Request"});
+    if(req.user.userType !== "barber") return res.status(400).send({success: false, message:"You do not have excess"});
+    
+    const { startTime, endTime, description } = req.body;
+    const barberId = req.user._id;
+    // Check this barber in DB
+    const barber = await ShopBarbersModel.findOne({_id: barberId});
+  
+      // If the barber is not found, return an error response
+      if (!barber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Barber not found',
+        });
+      }
+    
+    // Check that it should not be any past day
+    const currentDate = moment().startOf('day'); // Get the current date without the time component
+
+    const providedDate = moment(startTime).startOf('day'); // Get the provided date without the time component
+
+    if (providedDate.isBefore(currentDate)) return res.status(400).send({success: false, message:"Error: The provided date is in the past."});
+
+
+    // Check for conflicting bookings
+const startDate = startTime.split('T')[0];
+  const endDate = endTime.split('T')[0];
+  const startTimeValue = startTime.split('T')[1];
+  const endTimeValue = endTime.split('T')[1];
+
+  const startDateTime = new Date(startDate);
+  const endDateTime = new Date(endDate);
+
+  startDateTime.setHours(startTimeValue.split(':')[0], startTimeValue.split(':')[1], 0, 0);
+  endDateTime.setHours(endTimeValue.split(':')[0], endTimeValue.split(':')[1], 0, 0);
+
+  const existingBooking = await BookingModel.findOne({
+    selectedBarber: barberId,
+    shopAdminAccountId: req.user.shopAdminAccountId,
+    bookingStatus: { $in: ['reserved', 'inprogress', 'pending', ] },
+    bookingDate: {
+      $gte: startDateTime,
+      $lte: endDateTime,
+    },
+    $or: [
+      {
+        $and: [
+          { 'bookingTime.startTime': { $lte: startTimeValue }, 'bookingTime.endTime': { $gte: startTimeValue } }
+        ]
+      },
+      {
+        $and: [
+          { 'bookingTime.startTime': { $lte: endTimeValue }, 'bookingTime.endTime': { $gte: endTimeValue } }
+        ]
+      },
+      {
+        $and: [
+          { 'bookingTime.startTime': { $gte: startTimeValue, $lte: endTimeValue } }
+        ]
+      }
+    ]
+  });
+
+  if (existingBooking) {
+    return res.status(400).json({ error: 'The barber already has a booking at the selected time.' });
+  }
+  console.log("startTime", startTime);
+  console.log("End Time", endTime);
+
+  // Converting into UTC Time
+  const startUtcTime = moment.utc(startTime).toDate();
+  const endUtcTime = moment.utc(endTime).toDate();
+
+    // Check for duplicate block times
+    const duplicateBlockTime = await BlockTime.findOne({
+      barberId,
+      startTime: startUtcTime,
+      endTime: endUtcTime
+    });
+
+    if (duplicateBlockTime) {
+      return res.status(400).json({ error: 'A block time already exists for the selected time range.' });
+    }
+
+    // Create new block time
+    const newBlockTime = new BlockTime({
+      shopAdminAccountId: req.user.shopAdminAccountId,
+      barberId,
+      startTime: startUtcTime,
+      endTime: endUtcTime,
+      description,
+    });
+
+    // Save the block time to the database
+    await newBlockTime.save(async function (err, data) {
+      if (err) {
+          if (err.name === 'MongoError' && err.code === 11000) {
+            // Duplicate username
+            return res.status(400).send({ succes: false, message: 'User already exist!' });
+          }
+    
+          // Some other error
+          console.log("err", err)
+          return res.status(400).send({success: false, message: "Something Went Wrong"});
+        }   
+
+        barber.barberBlockTime.push(data._id);
+        await barber.save();
+        
+        // Return a success response
+        return res.status(200).json({
+          data: data,
+          success: true,
+          message: 'Block time added successfully.',
+        });
+
+      })
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while adding block time.' });
+  }
+}
+
+// Get Specific Barber Block Time
+exports.getFutureBarberBlockTime = async (req, res) => {
+  try {
+    if (!req.body.startTime || !req.body.endTime || !req.body.page || !req.body.pageSize) return res.status(400).json({success: false, message:"Invalid Request"});
+    if(req.user.userType !== "barber") return res.status(400).json({success: false, message:"You do not have excess"});
+    const barberId = req.user._id
+    const currentPage = parseInt(req.body.page) || 1;
+    const pageSize = parseInt(req.body.pageSize) || 10;
+    const skip = (currentPage - 1) * pageSize;
+
+// Converting into UTC Time
+  // const startTime = moment.utc(startTime).toDate();
+  // const endTime = moment.utc(endTime).toDate();
+
+    // const ctDate =  new Date();
+    const startUtcTime = moment.utc().toDate();
+const endUtcTime = moment.utc().add(100, 'years').toDate();
+
+const query = {
+  barberId,
+  startTime: { $gte: startUtcTime },
+};
+
+const totalBlocks = await BlockTime.countDocuments(query);
+const totalPages = Math.ceil(totalBlocks / pageSize);
+
+const blocks = await BlockTime.find(query)
+  .sort({ startTime: 'asc' })
+  .skip(skip)
+  .limit(pageSize);
+
+      if(!blocks.length) return res.status(400).json({success: false, message:"There is no block time"});
+
+    res.json({
+      currentPage,
+      totalPages,
+      pageSize,
+      totalBlocks,
+      blocks,
+    });
+    return res.status(200).json({
+      data: blocks,
+      currentPage,
+      totalPages,
+      pageSize,
+      totalBlocks,
+      success: true,
+      message: 'Block time.',
+    });
+  } catch (error) {
+    console.log("eee",error)
+    res.status(500).json({ error: 'An error occurred while retrieving barber block time.' });
+  }
+}
+
+// Delete Single Block Of Barber
+exports.deleteBlockById = async (req, res) => {
+  try {
+    if (!req.body.blockId) return res.status(400).json({success: false, message:"Invalid Request"});
+    if(req.user.userType !== "barber") return res.status(400).json({success: false, message:"You do not have excess"});
+    const { blockId } = req.body;
+
+    // Validate blockId format
+    if (!mongoose.isValidObjectId(blockId)) {
+      return res.status(400).json({ success: false, message: 'Invalid block ID' });
+    }
+
+    // Find and delete the block
+    const deletedBlock = await BlockTime.findByIdAndDelete({_id: blockId, barberId: req.user._id});
+
+    // Check if the block exists
+    if (!deletedBlock) {
+      return res.status(400).json({ success: false, message: 'Block not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Block deleted successfully' });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: 'An error occurred while deleting the block' });
+  }
+};
+
+// Get specific range of date of Appointments
+exports.getAppointementbasedOnDateRange = async (req, res) => {
+  try {
+    const { startDate, endDate, page } = req.body;
+
+    if (!startDate || !endDate || !page) {
+      return res.status(400).send({ success: false, message: "Invalid Request" });
+    }
+    if(req.user.userType !== "barber") return res.status(400).json({success: false, message:"You do not have excess"});
+
+    const startOfDay = moment(startDate).startOf('day').toDate();
+    const endOfDay = moment(endDate).endOf('day').toDate();
+
+    const pageSize = 10; // Set the number of bookings per page
+    const currentPage = parseInt(page) || 1; // Get the current page from the request
+
+    const totalBookings = await BookingModel.countDocuments({
+      selectedBarber: req.user._id,
+      isConfirmedByBarber: true,
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
+    });
+
+    const totalPages = Math.ceil(totalBookings / pageSize);
+    const skip = (currentPage - 1) * pageSize;
+
+    const upcomingBookings = await BookingModel.find({
+      selectedBarber: req.user._id,
+      isConfirmedByBarber: true,
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
+    })
+      .populate("customer")
+      .sort({ 'bookingTime.startTime': 1 })
+      .skip(skip)
+      .limit(pageSize);
+
+    if (!upcomingBookings.length) {
+      return res.status(400).send({ success: false, message: "There are no upcoming bookings within the specified range" });
+    }
+
+    res.send({
+      currentPage,
+      totalPages,
+      pageSize,
+      totalBookings,
+      data: upcomingBookings,
+      success: true,
+      message: "Upcoming Bookings"
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Server Internal Error"
+    });
+  }
+};
+
+// Get Today Appointments
+exports.getTodayBarberBookings = async (req, res) => {
+  try {
+    if (!req.body.page) return res.status(400).json({success: false, message:"Invalid Request"});
+    if (req.user.userType !== 'barber') {
+      return res.status(400).send({ success: false, message: 'You do not have access' });
+    }
+
+    const pageSize = req.body.pageSize || 10; // Set the number of bookings per page
+    const page = req.body.page || 1; // Get the current page from the request body
+
+    const currentDate = moment().startOf('day'); // Get the current date without the time
+
+    const query = {
+      selectedBarber: req.user._id,
+      bookingDate: currentDate,
+      bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
+      isConfirmedByBarber: true,
+    };
+
+    const totalBookings = await BookingModel.countDocuments(query);
+    const totalPages = Math.ceil(totalBookings / pageSize);
+
+    const todayBookings = await BookingModel.find(query)
+      .populate('customer')
+      .sort({ 'bookingTime.startTime': 1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize);
+
+    if (!todayBookings.length) {
+      return res.status(400).send({ success: false, message: 'There are no bookings for today' });
+    }
+
+    res.send({
+      data: todayBookings,
+      currentPage: page,
+      totalPages,
+      pageSize,
+      totalBookings,
+      success: true,
+      message: 'Today\'s Bookings',
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      error,
+      message: 'Server Internal Error',
+    });
+  }
 };

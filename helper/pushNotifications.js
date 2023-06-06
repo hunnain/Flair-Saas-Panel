@@ -1,10 +1,11 @@
 const Promise = require('bluebird');
 var admin = require("firebase-admin");
 
-var serviceAccount = require("../firbaseVeliaServiceAccount.json");
+// var serviceAccount = require("../firbaseVeliaServiceAccount.json");
+var serviceAccount = null
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+//   credential: admin.credential.cert(serviceAccount)
 });
 class Push {
     constructor() {

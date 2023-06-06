@@ -54,6 +54,7 @@ const ShopBarberSchema = new Schema({
         trim: true
     },
     workingLocation: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopbranches' }],
+    barberBlockTime: [{ type : mongoose.Schema.Types.ObjectId, ref: 'BlockTime' }],
     customerRequiredToAddCardByBarber: [{ type : mongoose.Schema.Types.ObjectId, ref: 'shopcustomers' }],
     workingHours: [{
         shopBranch: {
@@ -116,9 +117,18 @@ const ShopBarberSchema = new Schema({
     instagram: {
         type: String
     },
-    barberPhotosGallery: {
-        type: Array
-    },
+    barberPhotosGallery: [{
+        _id: {
+          type: mongoose.Schema.Types.ObjectId,
+          default: function () {
+            return new mongoose.Types.ObjectId();
+          }
+        },
+        imageUrl: {
+          type: String,
+          required: true
+        }
+      }],
     social:{
         type: String,
         default: null
