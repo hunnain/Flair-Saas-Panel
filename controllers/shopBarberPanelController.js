@@ -1275,3 +1275,113 @@ exports.getTodayBarberBookings = async (req, res) => {
     });
   }
 };
+
+// GET Barber Clients who previous books any booking with barber
+exports.getCustomersOfBarber = async (req, res) => {
+  try {
+    if (!req.body.page) return res.status(400).json({success: false, message:"Invalid Request"});
+    if (req.user.userType !== 'barber') {
+      return res.status(400).send({ success: false, message: 'You do not have access' });
+    }
+
+    const barberId = req.user._id;
+    const page = req.body.page || 1;
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+
+    const bookings = await BookingModel.find({ selectedBarber: barberId })
+      .sort({ bookingDate: -1, 'bookingTime.startTime': -1 })
+      .populate('customer')
+      .exec();
+
+    const filteredBookings = bookings.filter((booking) => {
+      const { bookingStatus } = booking;
+      return ['completed', 'reserved', 'pending'].includes(bookingStatus);
+    });
+
+    const customerIds = filteredBookings.map((booking) => booking.customer._id);
+    const uniqueCustomerIds = [...new Set(customerIds)];
+
+    const customers = await ShopCustomersModel.find({ _id: { $in: uniqueCustomerIds } })
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
+      .exec();
+
+    if (!customers.length) {
+      return res.status(400).send({ success: false, message: 'No customers found' });
+    }
+
+    res.send({
+      data: customers,
+      success: true,
+      message: 'Customers',
+      currentPage: page,
+      totalPages: Math.ceil(customers.length / pageSize),
+      pageSize,
+      totalCustomers: customers.length,
+    });
+
+  } catch (error) {
+    console.log('ERR',error)
+    res.status(500).send({
+      success: false,
+      error,
+      message: 'Server Internal Error',
+    });
+  }
+};
+
+// Get Single Customer All Bookings with Barber
+exports.getAllAppointmentsOfSingleCustomer = async (req, res) => {
+  try {
+    if (!req.body.customerId || !req.body.page) return res.status(400).json({success: false, message:"Invalid Request"});
+    if (req.user.userType !== 'barber') {
+      return res.status(400).send({ success: false, message: 'You do not have access' });
+    }
+
+    const barberId = req.user._id;
+    const customerId = req.body.customerId;
+    const page = req.body.page || 1;
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+
+    const appointments = await BookingModel.find({
+      customer: customerId,
+      selectedBarber: barberId,
+      bookingStatus: { $in: ['completed', 'cancelled'] },
+    })
+      .sort({ bookingDate: -1 }) // Sort appointments by bookingDate in descending order
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .populate("customer")
+      .populate({
+        path: "selectedBarberServices.service",
+        model: "barberschoosenservice",
+        populate: {
+          path: "shopServiceId",
+          model: "shopservices",
+        },
+      });
+
+    if (!appointments.length) {
+      return res.status(404).send({ success: false, message: "No appointments found" });
+    }
+
+    res.send({
+      data: appointments,
+      success: true,
+      message: 'Appointments',
+      currentPage: page,
+      totalPages: Math.ceil(appointments.length / pageSize),
+      pageSize,
+      totalAppointments: appointments.length,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      error,
+      message: 'Server Internal Error',
+    });
+  }
+};

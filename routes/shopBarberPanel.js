@@ -22,5 +22,7 @@ router.route('/getfuturebarberblocktime')	.post(controller.getFutureBarberBlockT
 router.route('/deleteblockid')	.post(controller.deleteBlockById)
 router.route('/appointmentbasedondaterange')	.post(controller.getAppointementbasedOnDateRange)
 router.route('/todaybarberappointments')	.post(controller.getTodayBarberBookings)
+router.route('/customersofbarber')	.post(controller.getCustomersOfBarber)
+router.route('/allbookingofsinglecustomer')	.post(controller.getAllAppointmentsOfSingleCustomer)
 
 module.exports = router;
