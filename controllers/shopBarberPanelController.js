@@ -1483,12 +1483,9 @@ exports.getSingleClientDetails = async (req, res) => {
 exports.barberFinalBookingCheckout = async (req, res) => {
   try {
     
-    if (!req.body.isThisCombinationOfPayment || !req.body.bookingId || !req.body.paymentMethodType) return res.status(400).json({ success: false, message: "Invalid Request" });
+    if (!req.body.bookingId || !req.body.paymentMethodType) return res.status(400).json({ success: false, message: "Invalid Request" });
     if (req.user.userType !== 'barber') return res.status(400).send({ success: false, message: 'You do not have access' });
      
-    if (req.body.isThisCombinationOfPayment === true) {
-      return res.status(400).json({ success: false, message: "Invalid Request" });
-    }
 
     // Validate payment methods
     const validPaymentMethods = ['stripe', 'cash', 'pos', 'other'];
