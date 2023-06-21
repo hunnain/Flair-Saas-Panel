@@ -94,6 +94,10 @@ const BookingSchema = new Schema({
     availablePromotionsDiscount:{
         type: Number,
     },
+    statesTaxesAndFees:{
+        type: Number,
+        default: 0
+    },
     totalPrice:{
         type: Number,
     },
@@ -102,7 +106,8 @@ const BookingSchema = new Schema({
         default: false
     },
     tipAmount: {
-        type: Number
+        type: Number,
+        default: 0
     },
     isConfirmedByBarber: {
         type: Boolean,
@@ -124,9 +129,53 @@ const BookingSchema = new Schema({
        type: Boolean,
        default: false
     },
+    savedStripeDebitOrCreditCardId: {
+      type: String
+   },
     paymentMethodType:{
+        type: [
+            {
+              method: {
+                type: String,
+                enum: ['stripe', 'cash', 'pos', 'other', 'points'],
+              },
+              amount: {
+                type: Number,
+              },
+              paid: {
+                type: Boolean,
+                default: false,
+              },
+            },
+          ],
+          validate: {
+            validator: function (value) {
+              const uniquePaymentMethods = [...new Set(value.map((method) => method.method))]; // Remove duplicate payment methods
+              const allowedPaymentMethods = ['stripe', 'cash', 'pos', 'other'];
+        
+              // Validate number of payment methods
+              if (uniquePaymentMethods.length > 2) {
+                return false;
+              }
+        
+              // Validate combination of payment methods
+              if (uniquePaymentMethods.includes('points')) {
+                return uniquePaymentMethods.length === 1; // Only points are allowed as a single payment method
+              } else {
+                return uniquePaymentMethods.every((method) => allowedPaymentMethods.includes(method));
+              }
+            },
+            message: 'Invalid combination of payment methods.',
+          },
+    },
+    otherPaymentMethodname:{
         type: String,
-        enum: ['stripe', 'cash', 'pos', 'points'],
+        validate: {
+            validator: function (value) {
+              return this.paymentMethodType !== 'other' || (this.paymentMethodType === 'other' && value);
+            },
+            message: 'Other payment method name is required when payment method type is other.',
+        },
     },
     isThisBookingReservedWithCard: {
         type: Boolean,
@@ -136,7 +185,7 @@ const BookingSchema = new Schema({
         type: String,
         enum: ['pending', 'completed', 'cancelled', 'failed'],
     },
-    checkoutData:{
+    checkoutDate:{
         type: Date
     },
     bookingStatus:{

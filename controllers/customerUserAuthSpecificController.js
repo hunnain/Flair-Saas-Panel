@@ -324,8 +324,10 @@ exports.createCustomerBooking = async (req, res) => {
         bookingModel.isConfirmedByBarber =  true
         bookingModel.confirmationDate =  moment.utc().toDate();
         bookingModel.isThisBookingReservedWithCard =  false;
+        bookingModel.savedStripeDebitOrCreditCardId =  req.body.savedStripeDebitOrCreditCardId;
         bookingModel.paymentStatus =  "pending";
         bookingModel.bookingStatus =  "reserved";        
+        
         
         // Checking barber has auto allow for booking request or it is manually done by barber
         if(barber.appointmentRequest === true){

@@ -24,5 +24,7 @@ router.route('/appointmentbasedondaterange')	.post(controller.getAppointementbas
 router.route('/todaybarberappointments')	.post(controller.getTodayBarberBookings)
 router.route('/customersofbarber')	.post(controller.getCustomersOfBarber)
 router.route('/allbookingofsinglecustomer')	.post(controller.getAllAppointmentsOfSingleCustomer)
+router.route('/singleCustomerDetails')	.post(controller.getSingleClientDetails)
+router.route('/barberbookingcheckout')	.post(controller.barberFinalBookingCheckout)
 
 module.exports = router;

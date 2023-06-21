@@ -17,7 +17,8 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require('twilio')(accountSid, authToken);
 const mongoose  = require('mongoose');
 const moment = require('moment-timezone');
-const validateBarberWorkingHours = require('./validations/shopBarberworkinTimeOnbranchValidation')
+const validateBarberWorkingHours = require('./validations/shopBarberworkinTimeOnbranchValidation');
+const {chargeCustomerCardBarber, capturePaymentStripePOS} = require('./validations/payments');
 
 // Auto Genrate String Numbers Function
 function makeid(length) {
@@ -742,6 +743,14 @@ exports.getUpcomingBookingsForBarber = async (req, res) => {
         ],
         bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
       }).populate("customer")
+      .populate({
+        path: 'selectedBarberServices.service',
+        model: 'barberschoosenservice',
+        populate: {
+          path: 'shopServiceId',
+          model: 'shopservices',
+        },
+      })
         .sort({ 'bookingTime.startTime': 1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize);
@@ -784,6 +793,14 @@ exports.getUpcomingBookingsForBarber = async (req, res) => {
         bookingDate: { $lte: currentDate },
         bookingStatus: { $in: ['completed', 'cancelled'] }
       }).populate("customer")
+      .populate({
+        path: 'selectedBarberServices.service',
+        model: 'barberschoosenservice',
+        populate: {
+          path: 'shopServiceId',
+          model: 'shopservices',
+        },
+      })
         .sort({ bookingDate: -1, 'bookingTime.startTime': -1 }).skip((page - 1) * pageSize)
         .limit(pageSize); // Sort by booking date and start time in descending order
 
@@ -815,7 +832,14 @@ exports.getSingleBookingDetail = async (req, res) => {
             shopAdminAccountId: req.user.shopAdminAccountId,
             _id: req.body.bookingId,
             selectedBarber: req.user._id
-        }).populate("customer")
+        }).populate("customer").populate({
+          path: 'selectedBarberServices.service',
+          model: 'barberschoosenservice',
+          populate: {
+            path: 'shopServiceId',
+            model: 'shopservices',
+          },
+        })
         if (!bookingModel) return res.status(400).send({success: false, message:"Sorry booking not found"}); 
         
 
@@ -1199,6 +1223,14 @@ exports.getAppointementbasedOnDateRange = async (req, res) => {
       bookingStatus: { $in: ['pending', 'reserved', 'inprogress'] },
     })
       .populate("customer")
+      .populate({
+        path: 'selectedBarberServices.service',
+        model: 'barberschoosenservice',
+        populate: {
+          path: 'shopServiceId',
+          model: 'shopservices',
+        },
+      })
       .sort({ 'bookingTime.startTime': 1 })
       .skip(skip)
       .limit(pageSize);
@@ -1250,6 +1282,14 @@ exports.getTodayBarberBookings = async (req, res) => {
 
     const todayBookings = await BookingModel.find(query)
       .populate('customer')
+      .populate({
+        path: 'selectedBarberServices.service',
+        model: 'barberschoosenservice',
+        populate: {
+          path: 'shopServiceId',
+          model: 'shopservices',
+        },
+      })
       .sort({ 'bookingTime.startTime': 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize);
@@ -1378,6 +1418,242 @@ exports.getAllAppointmentsOfSingleCustomer = async (req, res) => {
       totalAppointments: appointments.length,
     });
   } catch (error) {
+    res.status(500).send({
+      success: false,
+      error,
+      message: 'Server Internal Error',
+    });
+  }
+};
+
+// Get Client Details
+exports.getSingleClientDetails = async (req, res) => {
+  try {
+    
+    if (!req.body.customerId) {
+      return res.status(400).json({ success: false, message: "Invalid Request" });
+    }
+    if (req.user.userType !== 'barber') {
+      return res.status(400).send({ success: false, message: 'You do not have access' });
+    }
+
+    const customerId = req.body.customerId;
+    const barberId = req.user._id;
+
+    const customer = await ShopCustomersModel.findById(customerId);
+
+    if (!customer) {
+      return res.status(400).send({ success: false, message: 'Customer not found' });
+    }
+
+    const bookings = await BookingModel.find({ selectedBarber: barberId, customer: customerId, bookingStatus: 'completed' })
+      .sort({ bookingDate: -1, 'bookingTime.startTime': -1 })
+      .populate('customer')
+      .exec();
+
+      const totalAppointments = bookings.length;
+      const totalSpend = bookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+      const averageSpend = totalSpend / totalAppointments;
+  
+      const firstBookingDate = bookings[totalAppointments - 1].bookingDate;
+      const lastBookingDate = bookings[0].bookingDate;
+      const weeksDiff = Math.ceil((lastBookingDate - firstBookingDate) / (7 * 24 * 60 * 60 * 1000));
+      const averageAppointmentsPerWeek = totalAppointments / weeksDiff;
+
+    res.send({
+      success: true,
+      customer,
+      totalAppointments,
+      averageSpend,
+      averageAppointmentsPerWeek,
+    });
+
+
+  } catch (error) {
+    console.log('ERR',error)
+    res.status(500).send({
+      success: false,
+      error,
+      message: 'Server Internal Error',
+    });
+  }
+};
+
+// Barber Side Checkout
+exports.barberFinalBookingCheckout = async (req, res) => {
+  try {
+    
+    if (!req.body.isThisCombinationOfPayment || !req.body.bookingId || !req.body.paymentMethodType) return res.status(400).json({ success: false, message: "Invalid Request" });
+    if (req.user.userType !== 'barber') return res.status(400).send({ success: false, message: 'You do not have access' });
+     
+    if (req.body.isThisCombinationOfPayment === true) {
+      return res.status(400).json({ success: false, message: "Invalid Request" });
+    }
+
+    // Validate payment methods
+    const validPaymentMethods = ['stripe', 'cash', 'pos', 'other'];
+    const selectedPaymentMethods = paymentMethodType.filter((method, index, self) => {
+      if (!method.method || !validPaymentMethods.includes(method.method)) {
+        return res.status(400).json({ success: false, message: `Invalid payment method: ${method.method}` });
+      }
+      if (self.findIndex((m) => m.method === method.method) !== index) {
+        return res.status(400).json({ success: false, message: `Duplicate payment method found: ${method.method}` });
+      }
+      if (method.method === 'other' && !req.body.otherPaymentMethodname) {
+        return res.status(400).json({ success: false, message: `Other payment method requires 'otherPaymentMethodname'.` });
+      }
+      return true;
+    });
+
+    if (selectedPaymentMethods.length === 0) {
+      return res.status(400).send({ success: false, message: 'Invalid payment methods' });
+    }
+
+     // Retrieve the booking from the database
+     const booking = await BookingModel.findOne({ _id: req.body.bookingId });
+
+     // Check if the booking exists
+     if (!booking) {
+       return res.status(404).send({ success: false, message: 'Booking not found' });
+     }
+
+
+     // Calculate total amount due
+    // const totalAmountDue = calculateTotalAmountDue(booking);
+
+    // Handle points payment
+    if (selectedPaymentMethods.includes('points')) {
+      // Validate points payment
+      // const isValidPointsPayment = validatePointsPayment(booking, totalAmountDue);
+
+      // if (!isValidPointsPayment) {
+      //   return res.status(400).send({ error: 'Invalid points payment' });
+      // }
+
+      // Process points payment
+      // processPointsPayment(booking, totalAmountDue);
+
+      // Update booking status and payment status
+      booking.bookingStatus = 'completed';
+      booking.paymentStatus = 'completed';
+    } else {
+      // Handle other payment methods
+      const paymentTypeCount = selectedPaymentMethods.length;
+
+      if (paymentTypeCount === 1) {
+        // Single payment method selected
+        const paymentMethod = selectedPaymentMethods[0];
+
+        // Process single payment method
+        // processSinglePayment(booking, paymentMethod, totalAmountDue);
+
+        // Update booking status and payment status
+        booking.bookingStatus = 'completed';
+        booking.paymentStatus = 'completed';
+      } else if (paymentTypeCount === 2) {
+        // Two payment methods selected
+        const paymentMethod1 = selectedPaymentMethods[0].method;
+        const paymentMethod2 = selectedPaymentMethods[1].method;
+
+        // Process two payment methods
+        // Check if "cash" is present in either payment method
+        if (paymentMethod1 === 'cash' || paymentMethod2 === 'cash') {
+          console.log('Cash method mentioned');
+          const matchingPaymentMethod = paymentMethod1 === 'cash' ? paymentMethod1 : paymentMethod2;
+          const amount = matchingPaymentMethod === paymentMethod1 ? selectedPaymentMethods[0].amount : selectedPaymentMethods[1].amount;
+          
+          const paymentCashObj = {
+            method: 'cash',
+            amount,
+            paid: true
+          };
+          booking.paymentMethodType.push(paymentCashObj);
+        }
+
+        // Check if "stripe" is present in either payment method
+        if (paymentMethod1 === 'stripe' || paymentMethod2 === 'stripe') {
+          console.log('Stripe method mentioned');
+          const matchingPaymentMethod = paymentMethod1 === 'stripe' ? paymentMethod1 : paymentMethod2;
+          const amount = matchingPaymentMethod === paymentMethod1 ? selectedPaymentMethods[0].amount : selectedPaymentMethods[1].amount;
+
+          // Convert amount to cents
+          const amountInCents = amount * 100;
+
+          // Stripe Process
+          chargeCustomerCardBarber(req.user.stripeCustomerId, amountInCents, req.body.paymentMethodToken, booking.savedStripeDebitOrCreditCardId);
+
+          const paymentStripeObj = {
+            method: 'stripe',
+            amount,
+            paid: true
+          };
+          booking.paymentMethodType.push(paymentStripeObj);
+        }
+
+        // Check if "pos" is present in either payment method
+        if (paymentMethod1 === 'pos' || paymentMethod2 === 'pos') {
+          console.log('POS method mentioned');
+          const matchingPaymentMethod = paymentMethod1 === 'pos' ? paymentMethod1 : paymentMethod2;
+          const amount = matchingPaymentMethod === paymentMethod1 ? selectedPaymentMethods[0].amount : selectedPaymentMethods[1].amount;
+
+          // paymentToken will be provided by the ipad app
+          const capturedPayment = await capturePaymentStripePOS(paymentToken, amount, currency);
+        }
+
+        // Check if "other" is present in either payment method
+        if (paymentMethod1 === 'other' || paymentMethod2 === 'other') {
+          console.log('Other method mentioned');
+          const matchingPaymentMethod = paymentMethod1 === 'other' ? paymentMethod1 : paymentMethod2;
+          const amount = matchingPaymentMethod === paymentMethod1 ? selectedPaymentMethods[0].amount : selectedPaymentMethods[1].amount;
+
+          let paymentotherObj = {
+            method: 'other',
+            amount,
+            paid: true
+          }
+          booking.paymentMethodType.push(paymentotherObj)
+          booking.otherPaymentMethodname = req.body.otherPaymentMethodname
+        }
+        
+        // Calculate subtotal amount based on selectedBarberServices with price and quantity
+        const subtotal = booking.selectedBarberServices.reduce((total, service) => {
+          const { price, quantity } = service.service;
+          return total + (price * quantity);
+        }, 0);
+
+        // Add statesTaxesAndFees to the subtotal
+        const totalAmountBeforeDiscount = subtotal + booking.statesTaxesAndFees;
+
+        // Subtract totalDiscount percentage from the total amount
+        const totalAmountAfterDiscount = totalAmountBeforeDiscount - (totalAmountBeforeDiscount * booking.totalDiscount / 100);
+
+        // Check if all payment methods have paid as true
+        const isAmountsMatchTotal = selectedPaymentMethods.every(method => method.amount === totalAmountAfterDiscount);
+        const isFullAmountPaid = isAmountsMatchTotal && booking.paymentMethodType.every(method => method.paid);
+
+        if (isFullAmountPaid) return res.status(400).send({ success: false, message: 'Full Amount not paid, There is one mthod not working' });
+
+
+          console.log('Full amount paid');
+          // Update booking status and payment status
+          booking.bookingStatus = 'completed';
+          booking.paymentStatus = 'completed';
+          booking.checkoutDate = moment().utc();
+
+
+      } else {
+        // Invalid number of payment methods selected
+        return res.status(400).send({ success: false, message: 'Invalid number of payment methods selected' });
+      }
+    }
+
+    // Save the updated booking
+    await booking.save();
+    res.send({ message: 'Booking successfully checked out' });
+ 
+
+  } catch (error) {
+    console.log('ERR',error)
     res.status(500).send({
       success: false,
       error,
