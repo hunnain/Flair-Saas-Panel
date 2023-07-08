@@ -91,7 +91,7 @@ async function capturePaymentStripePOS(paymentToken, amount, currency) {
     const capturedPayment = await stripe.paymentIntents.capture(paymentIntent.id);
 
     // Return the captured payment object
-    return capturedPayment;
+    return {success: true, capturedPayment};
   } catch (error) {
     // Handle any errors that occurred during the payment capture process
     console.error('Error capturing payment:', error);

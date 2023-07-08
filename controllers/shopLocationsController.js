@@ -80,30 +80,27 @@ exports.addShopLocations = async function (req, res) {
   }
 }
 
-// Get logged in User meeting history
-// exports.getLoggedUserMeetingHistory = async function (req, res) {
-//   try{
-//       if (!req.body.page) return res.status(400).send({success: false, message:"Invalid Request"});
-//       let maxDocument = 10;
-//       let pagesSkip = 10 * req.body.page;
+// Get All Shop Location
+exports.getAllShopLocations = async (req, res) => {
+  try {
+    if(!req.body.shopAdminAccountId) return res.status(400).send({success: false, message:"Invalid Request"});
+    const { shopAdminAccountId } = req.body;
 
-//       // const userDate = moment().format('YYYY-MM-DD');
-//       const today = moment().startOf('day')
-//       const futureDate = new Date(Date.now() + (365 * 86400000))
-//       console.log('today',today, 'future date',futureDate, req.user._id)
-//   let meetingHistory = await MeetingHistoryModel.find({ $or:[ {'invitationCreatorUserId':"635fb08b9db04e00184e64c2"}, {'invitationAcceptorUserId':"635fb08b9db04e00184e64c2"}]}).skip(parseFloat(pagesSkip))
-//   .limit(maxDocument).sort({meetingDate: -1})
-//   if (!meetingHistory) return res.status(400).send({success: false, message:"Not Found"});
-      
-  
-//       res.json({
-//           success: true,
-//           message: "meeting history Detail",
-//           data: meetingHistory
-//       });
-//   }catch (error) {
-//       res.status(500).send({
-//           success: false,error, message:"Server Internal Error"
-//       });
-//   }
-// }
+    const shopLocations = await ShopBranchesModel.find({
+      shopAdminAccountId: shopAdminAccountId
+    });
+
+    res.send({
+      data: shopLocations,
+      success: true,
+      message: "Shop locations found!"
+    });
+  } catch (error) {
+    console.log("Error", error);
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Server Internal Error"
+    });
+  }
+};

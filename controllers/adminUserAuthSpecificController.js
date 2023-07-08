@@ -3,6 +3,7 @@ const UserModel = require('../models/shopAdminSignup')
 const SubAdminModel = require('../models/adminPanelSubAdminAccount');
 const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
 const ShopServicesModel = require('../models/shopServices');
+const ShopBarbersModel = require("../models/shopBarberSignup");
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -1132,3 +1133,92 @@ exports.deleteSingleServiceOfShop = async (req, res) => {
         });
     }
 };
+
+// Get All Barbers withoutfilter and paginations
+exports.getAllBarbers = async (req, res) => {
+    try{
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+        
+        const shopBarbersModel = await ShopBarbersModel.find({
+            shopAdminAccountId: req.user._id
+        })
+        if (!shopBarbersModel.length) return res.status(400).send({success: false, message:"Barber not found"}); 
+        
+
+            res.send({
+                data: shopBarbersModel,
+                success: true,
+                message: "Barbers!"
+            });
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Search Barber Barbers withoutfilter and paginations
+exports.searchBarber = async (req, res) => {
+    try {
+        if(!req.body.searchQuery) return res.status(400).send({success: false, message:"Invalid Request"});
+        if (req.user.userType !== "admin")
+          return res.status(400).send({ success: false, message: "You do not have access" });
+    
+        const { searchQuery } = req.body;
+        const regex = new RegExp(searchQuery, "i");
+    
+        const shopBarbersModel = await ShopBarbersModel.find({
+          shopAdminAccountId: req.user._id,
+          $or: [
+            { firstName: { $regex: regex } },
+            { lastName: { $regex: regex } }
+          ]
+        });
+    
+        if (!shopBarbersModel.length)
+          return res.status(400).send({ success: false, message: "Barber not found" });
+    
+        res.send({
+          data: shopBarbersModel,
+          success: true,
+          message: "Barbers!"
+        });
+      } catch (error) {
+        console.log("err", error);
+        res.status(500).send({
+          success: false,
+          error,
+          message: "Server Internal Error"
+        });
+      }
+};
+
+// Search Services
+exports.searchServices = async (req, res) => {
+    try {
+        if(!req.body.searchQuery) return res.status(400).send({success: false, message:"Invalid Request"});
+      const { searchQuery } = req.body;
+      const regex = new RegExp(searchQuery, "i");
+  
+      const services = await ShopServicesModel.find({
+        serviceName: { $regex: regex }
+      })
+      .populate('serviceCategoryId')
+      .exec();
+  
+      res.send({
+        data: services,
+        success: true,
+        message: "Services found!"
+      });
+    } catch (error) {
+      console.log("Error", error);
+      res.status(500).send({
+        success: false,
+        error,
+        message: "Server Internal Error"
+      });
+    }
+  };

@@ -109,6 +109,9 @@ const BookingSchema = new Schema({
         type: Number,
         default: 0
     },
+    stripeChargeIdTransaction:{
+      type: String
+    },
     isConfirmedByBarber: {
         type: Boolean,
         default: false

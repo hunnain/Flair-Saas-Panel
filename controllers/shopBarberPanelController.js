@@ -42,6 +42,8 @@ function generateAccessToken(userObj) {
 exports.signupBarberOfShop = async function (req, res) {
     try {
     if (!req.body.email || !req.body.mobile || !req.body.firstName || !req.body.lastName || !req.body.role) return res.status(400).send({success: false, message:"Invalid Request"});
+    if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+    
     const barberEmailChecking = await ShopBarbersModel.findOne({
 		email: req.body.email,
         shopAdminAccountId: req.user._id
@@ -1479,11 +1481,11 @@ exports.getSingleClientDetails = async (req, res) => {
   }
 };
 
-// Barber Side Checkout
+// Barber Side Checkout  ---testing
 exports.barberFinalBookingCheckout = async (req, res) => {
   try {
-    
-    if (!req.body.bookingId || !req.body.paymentMethodType) return res.status(400).json({ success: false, message: "Invalid Request" });
+     
+    if (!req.body.bookingId || !req.body.paymentMethodType || !req.body.barberCurrentDateTime) return res.status(400).json({ success: false, message: "Invalid Request" });
     if (req.user.userType !== 'barber') return res.status(400).send({ success: false, message: 'You do not have access' });
      
 
@@ -1513,6 +1515,16 @@ exports.barberFinalBookingCheckout = async (req, res) => {
      if (!booking) {
        return res.status(404).send({ success: false, message: 'Booking not found' });
      }
+
+     // Check if the provided booking date and time are valid. So here Barber cannot checkout until date and time started of appointment
+    const selectedDateTime = new Date(barberCurrentDateTime);
+    const storedDateTime = new Date(booking.bookingDate);
+    const storedStartTime = new Date(`1970-01-01T${booking.bookingTime.startTime}`);
+
+    if (selectedDateTime < storedDateTime || (selectedDateTime.getTime() === storedDateTime.getTime() && selectedDateTime.getTime() < storedStartTime.getTime())) {
+      console.log('You cannot checkout right now because the time has not started yet.');
+      return res.status(400).json({ message: 'Booking date and time must be equal to or after the stored booking date and start time.' });
+    }
 
 
      // Calculate total amount due
@@ -1577,14 +1589,24 @@ exports.barberFinalBookingCheckout = async (req, res) => {
           const amountInCents = amount * 100;
 
           // Stripe Process
-          chargeCustomerCardBarber(req.user.stripeCustomerId, amountInCents, req.body.paymentMethodToken, booking.savedStripeDebitOrCreditCardId);
+          const chargeCustomerViaStripeFunc = await chargeCustomerCardBarber(req.user.stripeCustomerId, amountInCents, req.body.paymentMethodToken, booking.savedStripeDebitOrCreditCardId);
 
-          const paymentStripeObj = {
-            method: 'stripe',
-            amount,
-            paid: true
-          };
-          booking.paymentMethodType.push(paymentStripeObj);
+          if (chargeCustomerViaStripeFunc.success) {
+            const paymentStripeObj = {
+              method: 'stripe',
+              amount,
+              paid: true
+            };
+            booking.paymentMethodType.push(paymentStripeObj);
+            booking.stripeChargeIdTransaction = chargeCustomerViaStripeFunc.chargeId
+          } else {
+            const paymentStripeObj = {
+              method: 'stripe',
+              amount,
+              paid: false
+            };
+            booking.paymentMethodType.push(paymentStripeObj);
+          }
         }
 
         // Check if "pos" is present in either payment method
@@ -1594,7 +1616,23 @@ exports.barberFinalBookingCheckout = async (req, res) => {
           const amount = matchingPaymentMethod === paymentMethod1 ? selectedPaymentMethods[0].amount : selectedPaymentMethods[1].amount;
 
           // paymentToken will be provided by the ipad app
-          const capturedPayment = await capturePaymentStripePOS(paymentToken, amount, currency);
+          const capturedPayment = await capturePaymentStripePOS(req.body.paymentToken, amount, currency);
+
+          if (capturedPayment.success) {
+            const paymentPOSObj = {
+              method: 'pos',
+              amount,
+              paid: true
+            };
+            booking.paymentMethodType.push(paymentPOSObj);
+          } else {
+            const paymentPOSObj = {
+              method: 'pos',
+              amount,
+              paid: false
+            };
+            booking.paymentMethodType.push(paymentPOSObj);
+          }
         }
 
         // Check if "other" is present in either payment method
@@ -1634,6 +1672,7 @@ exports.barberFinalBookingCheckout = async (req, res) => {
           console.log('Full amount paid');
           // Update booking status and payment status
           booking.bookingStatus = 'completed';
+          booking.totalPrice = totalAmountAfterDiscount
           booking.paymentStatus = 'completed';
           booking.checkoutDate = moment().utc();
 

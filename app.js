@@ -131,11 +131,13 @@ var addShopLocation 	= require('./routes/addShopLocation');
 var shopCustomersWithoutAuth = require('./routes/shopCustomerPanelWithoutAuth');
 var shopBarbers = require('./routes/shopBarberPanel');
 var shopBarbersWithoutAuth = require('./routes/shopbarberWithoutAuth');
+var adminAutomatedCampaigns = require('./routes/adminAutomatedCampaigns');
 
 //Routes Binding 
 app.use('/', indexRouter)
 app.use('/admin', adminUserRouter)
 app.use('/adminuser', authenticationMiddleware, userAdminAuthSpecific)
+app.use('/automated', authenticationMiddleware, adminAutomatedCampaigns)
 app.use('/customeruser', authenticationMiddleware, userCustomerAuthSpecific)
 app.use('/group', groupRouter)
 app.use('/invitationcard', authenticationMiddleware, invitationCard)
