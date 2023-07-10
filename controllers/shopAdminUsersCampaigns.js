@@ -3,6 +3,7 @@ const SubAdminModel = require('../models/adminPanelSubAdminAccount');
 const ShopServicesCategoryModel = require('../models/shopServicesCatgories');
 const ShopServicesModel = require('../models/shopServices');
 const AutomatedCampaigns = require('../models/automatedCmpaigns');
+const AutomatedAlgorithmCampaigns = require('../models/automatedAlgorithmBasedCampaigns');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const bcrypt    = require('bcrypt');
@@ -702,6 +703,115 @@ exports.updateAutomatedRewardRegularCampaigns = async (req, res) => {
         }
 
         automatedCampaigns.save(async function (err, data) {
+            if (err) {
+              if (err.name === 'MongoError' && err.code === 11000) {
+                // Duplicate username
+                return res.status(400).send({ succes: false, message: 'Looks Like this campaign already exist!' });
+              }
+        
+              // Some other error
+              return res.status(400).send({success: false, err ,message:"Something Went Wrong!"});
+            }
+        
+              res.json({
+                  success: true,
+                  message: "Sucessfully Updated!",
+                  data: data
+              });
+          });
+
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Create Automated Reminder to Book Campaign
+exports.createAutomatedBookAReminderCampaigns = async (req, res) => {
+    try{
+        if (!req.body.isCampaignActive || !req.body.selectedServices || !req.body.selectedBarbers || !req.body.selectedBranches || !req.body.selectedCustomers) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+
+        // Check that birthday campaign is already exist or not
+        const automatedAlgorithmCampaignsChecking = await AutomatedAlgorithmCampaigns.findOne({
+            shopAdminAccountId: req.user._id,
+            campaignType: 'remindertobook'
+        })
+        if (automatedAlgorithmCampaignsChecking) return res.status(400).send({success: false, message:"Book a reminder campaign already exist. Please edit the current one or delete and restart it again"}); 
+        
+        const utcDate = moment.utc();
+
+        var automatedAlgorithmCampaigns = new AutomatedAlgorithmCampaigns();
+        automatedAlgorithmCampaigns.shopAdminAccountId =  req.user._id
+        automatedAlgorithmCampaigns.campaignType =  'remindertobook'
+        automatedAlgorithmCampaigns.selectedServices =  req.body.selectedServices
+        automatedAlgorithmCampaigns.selectedBarbers =  req.body.selectedBarbers
+        automatedAlgorithmCampaigns.selectedBranches =  req.body.selectedBranches
+        automatedAlgorithmCampaigns.selectedCustomers =  req.body.selectedCustomers
+        automatedAlgorithmCampaigns.isCampaignActive =  req.body.isCampaignActive
+        automatedAlgorithmCampaigns.campaignCreatedDate =  utcDate.toDate();
+
+        automatedAlgorithmCampaigns.save(async function (err, data) {
+            if (err) {
+              if (err.name === 'MongoError' && err.code === 11000) {
+                // Duplicate username
+                return res.status(400).send({ succes: false, message: 'Looks Like this campaign already exist!' });
+              }
+        
+              // Some other error
+              return res.status(400).send({success: false, err ,message:"Something Went Wrong!"});
+            }
+        
+              res.json({
+                  success: true,
+                  message: "Sucessfully Added!",
+                  data: data
+              });
+          });
+
+        
+    }catch (error) {
+        console.log("err",error)
+        res.status(500).send({
+            success: false,error, message:"Server Internal Error"
+        });
+    }
+};
+
+// Update Automated Book a Reminder Campaign
+exports.updateAutomatedBookAReminderCampaigns = async (req, res) => {
+    try{
+        if (!req.body.bookAReminderCampaignId) return res.status(400).send({success: false, message:"Invalid Request"});
+        if(req.user.userType !== "admin") return res.status(400).send({success: false, message:"You do not have excess"});
+
+        // Check that birthday campaign is already exist or not
+        const automatedAlgorithmCampaigns = await AutomatedAlgorithmCampaigns.findOne({
+            shopAdminAccountId: req.user._id,
+            campaignType: 'remindertobook',
+            _id: req.body.bookAReminderCampaignId
+        })
+        if (!automatedAlgorithmCampaigns) return res.status(400).send({success: false, message:"Book a Reminder campaign not found"}); 
+        
+        if(req.body.selectedServices){
+            automatedAlgorithmCampaigns.selectedServices =  req.body.selectedServices
+        }
+        if(req.body.selectedBarbers){
+            automatedAlgorithmCampaigns.selectedBarbers =  req.body.selectedBarbers
+        }
+        if(req.body.selectedBranches){
+            automatedAlgorithmCampaigns.selectedBranches =  req.body.selectedBranches
+        }
+        if(req.body.selectedCustomers){
+            automatedAlgorithmCampaigns.selectedCustomers =  req.body.selectedCustomers
+        }
+        if(req.body.isCampaignActive){
+            automatedAlgorithmCampaigns.isCampaignActive =  req.body.isCampaignActive
+        }
+
+        automatedAlgorithmCampaigns.save(async function (err, data) {
             if (err) {
               if (err.name === 'MongoError' && err.code === 11000) {
                 // Duplicate username

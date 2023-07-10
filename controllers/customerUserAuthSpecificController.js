@@ -80,6 +80,12 @@ exports.updateCustomer = async function (req, res) {
     }
     if(req.body.dob){
         user.dob = req.body.dob
+    }
+    if(req.body.isCustomerOutOfTown){
+        user.isCustomerOutOfTown = req.body.isCustomerOutOfTown
+    }
+    if(req.body.isCustomerNotificationIsOn){
+        user.isCustomerNotificationIsOn = req.body.isCustomerNotificationIsOn
     } 
     // const customer = await stripe.customers.create({
     //     email:req.body.email.toLowerCase(),

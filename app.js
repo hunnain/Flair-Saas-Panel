@@ -7,6 +7,8 @@ var logger 					 = require('morgan')
 var bodyParser 				 = require('body-parser')
 var mongoose 				 = require('mongoose')
 var authenticationMiddleware = require('./middlewares/index')
+const {calculateNextBookingDate} = require('./controllers/validations/automatedCampaignsAlgorightm')
+const cronJob  = require('./controllers/cronJob/automatedCampaignCron');
 var cron 					 = require('node-cron')
 var dotenv 					 = require('dotenv')
 const moment = require('moment-timezone');
@@ -117,6 +119,21 @@ async function uploadToCloudinary(locaFilePath) {
             return { message: "Fail" , error};
         });
 }
+
+// Testing
+// const test = async () => {
+//     try {
+//       const averageBookingTime = await calculateNextBookingDate("63c57f431789012b00d10ed7");
+//       console.log("Next Booking Date:", averageBookingTime);
+//     } catch (error) {
+//       // Handle the error appropriately
+//       console.error("Error:", error);
+//     }
+//   };
+  
+//   test();
+
+cronJob.performBookingReminderPredictionEveryWeek()
 
 
 // Routes Imported 

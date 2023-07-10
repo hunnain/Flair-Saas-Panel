@@ -3,6 +3,34 @@ const bcrypt    = require('bcrypt');
 const Schema    = mongoose.Schema;
 const crypto = require('crypto');
 
+// Notification
+const NotificationSchema = new Schema({
+    type: {
+      type: String,
+      required: true,
+      enum: ['sms', 'email', 'pushnotification']
+    },
+    notitificationCriterias: {
+        type: String,
+        required: true,
+        enum: ['birthday', 'rewardregulars', 'newclients', 'promotereviews', 'remindertobook', 'lastminuteopening', 'rescuelostclients', 'fillslowdays', 'manual']
+      },
+    title: {
+      type: String,
+      required: function () {
+        return ['sms', 'email'].includes(this.type);
+      }
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    sentAt: {
+      type: Date,
+      required: true
+    }
+  });
+
 const ShopCustomersSchema = new Schema({
     shopAdminAccountId:{
         type: mongoose.Schema.Types.ObjectId,
@@ -107,6 +135,18 @@ const ShopCustomersSchema = new Schema({
     },
     stripeSavedCardIds:{
         type: Array
+    },
+    isCustomerOutOfTown:{
+        type: Boolean,
+        default: false
+    },
+    isCustomerNotificationIsOn:{
+        type: Boolean,
+        default: true
+    },
+    notifications: {
+        type: [NotificationSchema],
+        default: []
     },
     created_at      : { type: Date, default: Date.now },
 })

@@ -11,5 +11,7 @@ router.route('/createnewclientscampaign')			.post(controller.createAutomatedNewC
 router.route('/updatenewclientscampaign')			.post(controller.updateAutomatednewClientsCampaigns)
 router.route('/createrewardregularcampaign')			.post(controller.createAutomatedRewardRegularCampaigns)
 router.route('/updaterewardregularcampaign')			.post(controller.updateAutomatedRewardRegularCampaigns)
+router.route('/createbookaremindercampaign')			.post(controller.createAutomatedBookAReminderCampaigns)
+router.route('/updatebookaremindercampaign')			.post(controller.updateAutomatedBookAReminderCampaigns)
 
 module.exports = router;

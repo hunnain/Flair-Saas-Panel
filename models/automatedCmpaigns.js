@@ -11,7 +11,7 @@ const automatedCampaignsSchema = new mongoose.Schema({
     campaignType: {
         type: String,
         required: true,
-        enum: ['birthday', 'rewardregulars', 'newclients', 'promotereviews', 'remindertobook', 'lastminuteopening', 'rescuelostclients', 'fillslowdays'],
+        enum: ['birthday', 'rewardregulars', 'newclients', 'promotereviews'],
     },
     isCampaignActive:{
         type: Boolean,
@@ -91,15 +91,24 @@ const automatedCampaignsSchema = new mongoose.Schema({
         },
     },
     selectedServices: {
-        type: Array,
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'shopservices' 
+          }],
         required: true
     },
     selectedBarbers: {
-        type: Array,
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'shopbarbers' 
+          }],
         required: true
     },
     selectedBranches: {
-        type: Array,
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'shopbranches' 
+          }],
         required: true
     },
     googleLink: {
